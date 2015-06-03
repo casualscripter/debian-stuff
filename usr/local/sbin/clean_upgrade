@@ -1,29 +1,65 @@
 #!/bin/bash
 #===============================================================================
-# FILE:         /usr/local/sbin/clean_upgrade
+# DIRECTORY:
+#   /usr/local/sbin/clean_upgrade
 #
-# USAGE:        $ sudo clean_upgrade
-#   OR          # clean_upgrade
-# OPTIONS:      none
+# FILE:
+#   clean_upgrade
 #
-# DESCRIPTION:  Automation of repetitive administrative activities relating to
-#                 the maintenance of a Debian GNU/Linux system.
-#                 (It should also run on a Ubuntu system!?)
+# USAGE:
+#   $ sudo clean_upgrade
+# OR
+#   # clean_upgrade
 #
-# REQUIREMENTS: coreutils (id and echo), grep, sed, aptitude, apt-file,
-#                 gawk or mawk und findutils
-# BUGS:         ---
-# NOTES:        ---
-# AUTHOR:       Patrick Neumann, patrick@neumannsland.de
-# COMPANY:      (privately)
+# OPTIONS:
+#   none
 #
-# VERSION:      1.0 (stable)
-# CREATED:      01.06.2015
+# DESCRIPTION:
+#   Automation of repetitive administrative activities relating to
+#   the maintenance of a Debian GNU/Linux system.
 #
-# COPYRIGHT:    ---
-# LICENSE:      ---
+# REQUIREMENTS:
+#   coreutils (id and echo), grep, sed, aptitude, apt-file,
+#   gawk or mawk und findutils
 #
-# HISTORY:      1.0 - Patrick Neumann - Initial (public) release
+# BUGS:
+#   ---
+#
+# NOTES:
+#   May also run on a Ubuntu system!?
+#
+# AUTHOR:
+#   Patrick Neumann, patrick@neumannsland.de
+#
+# COMPANY:
+#   (privately)
+#
+# VERSION:
+#   1.0 (stable)
+#
+# CREATED:
+#   01.06.2015
+#
+# COPYRIGHT (C):
+#   2015 - Patrick Neumann
+#
+# LICENSE:
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+# WARRANTY:
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# HISTORY:
+#   1.0 - Patrick Neumann - Initial (public) release
 #===============================================================================
 
 #=== FUNCTION ==================================================================
