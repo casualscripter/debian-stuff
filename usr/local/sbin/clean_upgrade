@@ -106,7 +106,7 @@ fi
 # Install "apt-file" if missing.
 #-------------------------------------------------------------------------------
 if [ ! -x "/usr/bin/apt-file" ] ; then
-  /usr/bin/aptitude install apt-file -assume-yes
+  /usr/bin/aptitude install apt-file --assume-yes
 fi
 
 #-------------------------------------------------------------------------------
