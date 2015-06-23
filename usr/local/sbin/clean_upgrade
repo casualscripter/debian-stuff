@@ -99,7 +99,7 @@ fi
 # Install "deborphan" if missing.
 #-------------------------------------------------------------------------------
 if [ ! -x "/usr/bin/deborphan" ] ; then
-  echo /usr/bin/aptitude install deborphan --assume-yes
+  /usr/bin/aptitude install deborphan --assume-yes
 fi
 
 #-------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ fi
 # Purge orphaned packages.
 #-------------------------------------------------------------------------------
 while REDUNDANT="$( /usr/bin/deborphan )" ; /usr/bin/test -n "${REDUNDANT}" ; do
-  echo /usr/bin/aptitude purge "${REDUNDANT}" --assume-yes
+  /usr/bin/aptitude purge "${REDUNDANT}" --assume-yes
 done
 
 exit 0
