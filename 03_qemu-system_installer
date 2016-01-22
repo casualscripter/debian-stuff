@@ -1,0 +1,329 @@
+#!/bin/bash
+#===============================================================================
+# DIRECTORY:
+#   ---
+#
+# FILE:
+#   03_qemu-system_installer
+#
+# USAGE:
+#   bash 03_qemu-system_installer
+#
+# OPTIONS:
+#   none
+#
+# DESCRIPTION:
+#   Installs qemu-system...
+#
+# REQUIREMENTS:
+#   bash, ...
+#
+# BUGS:
+#   ---
+#
+# NOTES:
+#   Tested on Debian 8.
+#
+# AUTHOR:
+#   Patrick Neumann, patrick@neumannsland.de
+#
+# COMPANY:
+#   (privately)
+#
+# VERSION:
+#   0.9 (beta)
+#
+# LINK TO THE MOST CURRENT VERSIONS:
+#   https://raw.githubusercontent.com/casualscripter/debian-stuff/master/home/user/bin/
+#
+# CREATED:
+#   20.11.2015
+#
+# COPYRIGHT (C):
+#   2015 - Patrick Neumann
+#
+# LICENSE:
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+# WARRANTY:
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# TODO:
+#   - more DRY (don't repeat yourself)
+#
+# HISTORY:
+#   0.9 - Patrick Neumann - Initial (public) release
+#===============================================================================
+
+#=== CONFIGURATION =============================================================
+WHICH_BIN="/usr/bin/which"                                  # Debian 8.x default
+PRINTF_BIN="$( ${WHICH_BIN} printf )"
+SUDO_BIN="$( ${WHICH_BIN} sudo )"                       # needs configured sudo!
+APTITUDE_BIN="$( ${WHICH_BIN} aptitude )"
+SLEEP_BIN="$( ${WHICH_BIN} sleep )"
+EXPR_BIN="$( ${WHICH_BIN} expr )"
+CAT_BIN="$( ${WHICH_BIN} cat )"
+PGREP_BIN="$( ${WHICH_BIN} pgrep )"
+GNOMESHELL_BIN="$( ${WHICH_BIN} gnome-shell )"
+MKDIR_BIN="$( ${WHICH_BIN} mkdir )"
+WGET_BIN="$( ${WHICH_BIN} wget )"
+UNZIP_BIN="$( ${WHICH_BIN} unzip )"
+RM_BIN="$( ${WHICH_BIN} rm )"
+SU_BIN="$( ${WHICH_BIN} su )"
+GREP_BIN="$( ${WHICH_BIN} grep )"
+GROUPS_BIN="$( ${WHICH_BIN} groups )"
+USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} usermod )"     # needs configured sudo!
+GSQ_BIN="$( ${WHICH_BIN} gnome-session-quit )"
+
+#=== FUNCTION ==================================================================
+# NAME: error_exit
+# DESCRIPTION: Display red error messages surrounded by "ERROR:" and "EXIT!!!".
+# PARAMETER 1: message (string)
+#===============================================================================
+error_exit () {
+  "${PRINTF_BIN}" "\n\033[01;31;40mERROR: ${1}... EXIT!!!\033[00m\n\n"
+  exit 1
+}
+
+#=== FUNCTION ==================================================================
+# NAME: error
+# DESCRIPTION: Display red error messages starting with "ERROR:".
+# PARAMETER 1: message (string)
+#===============================================================================
+error () {
+  "${PRINTF_BIN}" "\033[01;31;40mERROR: ${1}!!!\033[00m\n"
+}
+
+#=== FUNCTION ==================================================================
+# NAME: hint
+# DESCRIPTION: Display blue hint messages starting with "HINT:".
+# PARAMETER 1: message (string)
+#===============================================================================
+hint () {
+  "${PRINTF_BIN}" "\033[01;34;40mHINT: ${1}!\033[00m\n"
+}
+
+#=== FUNCTION ==================================================================
+# NAME: success
+# DESCRIPTION: Display green success messages starting with "SUCCESS:".
+# PARAMETER 1: message (string)
+#===============================================================================
+success () {
+  "${PRINTF_BIN}" "\033[01;32;40mSUCCESS: ${1}!\033[00m\n"
+}
+
+#=== FUNCTION ==================================================================
+# NAME: install_if_necessary
+# DESCRIPTION: Check if binary exists and (try to) install package if not.
+# PARAMETER 1: absolute path to binary (string)
+# PARAMETER 2: package name (string)
+#===============================================================================
+install_if_necessary () {
+  if [ ! -x "${1}" ] ; then
+    ${SUDO_BIN} ${APTITUDE_BIN} install "${2}" --assume-yes
+    if [ "${?}" -eq "0" ] ; then
+      success "installation of ${2} completed"
+    else
+      error_exit "installation of ${2} failed"
+    fi
+  else
+    hint "${2} already installed"
+  fi
+  ${SLEEP_BIN} 2
+}
+
+#=== FUNCTION ==================================================================
+# NAME: download_zip
+# DESCRIPTION: Download zip file if necessary and delete it after unzip.
+# PARAMETER 1: url to zip file (string)
+#===============================================================================
+download_zip () {
+  ${WGET_BIN} --no-clobber "${1}"
+  if [ "${?}" -eq "0" ] ; then
+    success "download of ${2} completed"
+  else
+    error_exit "download of ${2} failed"
+  fi
+  ${SLEEP_BIN} 1
+  ${UNZIP_BIN} "${1##*/}"
+  if [ "${?}" -eq "0" ] ; then
+    success "unzipping ${2} completed"
+  else
+    error_exit "unzipping ${2} failed"
+  fi
+  ${SLEEP_BIN} 1
+  ${RM_BIN} "${1##*/}"
+  if [ "${?}" -eq "0" ] ; then
+    success "deleting ${2} completed"
+  else
+    error_exit "deleting ${2} failed"
+  fi
+  ${SLEEP_BIN} 2
+}
+
+#-------------------------------------------------------------------------------
+# Check vor Debian GNU/Linux.
+#-------------------------------------------------------------------------------
+if ! [ -f "/etc/debian_version" ] ; then
+  error_exit "Debian GNU/Linux not found"
+fi
+
+#-------------------------------------------------------------------------------
+# Check vor Version 8 (jessie) or greater.
+#-------------------------------------------------------------------------------
+if ! ${EXPR_BIN} "$( ${CAT_BIN} /etc/debian_version )" \>= 8.0 > /dev/null 2>&1 ; then
+  error_exit "Debian GNU/Linux >= 8.0 not found"
+fi
+
+#-------------------------------------------------------------------------------
+# Check vor a running Gnome desktop environment.
+#-------------------------------------------------------------------------------
+if ! ${PGREP_BIN} --full "${GNOMESHELL_BIN}" > /dev/null 2>&1 ; then
+  error_exit "Gnome desktop environment not running"
+fi
+
+#-------------------------------------------------------------------------------
+# Updates the list of available packages from the apt sources.
+#-------------------------------------------------------------------------------
+${SUDO_BIN} ${APTITUDE_BIN} update
+success "list of available packages updated"
+${SLEEP_BIN} 2
+
+#-------------------------------------------------------------------------------
+# Install qemu-system-x86 if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/qemu-system-x86_64" "qemu-system-x86"
+
+#-------------------------------------------------------------------------------
+# Install qemu-system-arm if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/qemu-system-arm" "qemu-system-arm"
+
+#-------------------------------------------------------------------------------
+# Install sysfsutils if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/systool" "sysfsutils"
+
+#-------------------------------------------------------------------------------
+# Install vinagre if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/vinagre" "vinagre"
+
+#-------------------------------------------------------------------------------
+# Install unzip if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/unzip" "unzip"
+
+#-------------------------------------------------------------------------------
+# Download QXL graphic drivers.
+#-------------------------------------------------------------------------------
+QXL_DIR="${HOME}/QEMU/QXL"
+${MKDIR_BIN} --parents "${QXL_DIR}"
+cd "${QXL_DIR}"
+download_zip "http://www.spice-space.org/download/windows/qxl/qxl-0.1-21/qxl_xp_x86.zip"
+download_zip "http://www.spice-space.org/download/windows/qxl/qxl-0.1-21/qxl_w7_x86.zip"
+download_zip "http://www.spice-space.org/download/windows/qxl/qxl-0.1-21/qxl_w7_x64.zip"
+download_zip "http://www.spice-space.org/download/windows/qxl/qxl-0.1-21/qxl_8k2R2_x64.zip"
+download_zip "http://people.redhat.com/~vrozenfe/qxlwddm/qxlwddm-0.12.zip"
+
+#-------------------------------------------------------------------------------
+# Download Open Virtual Machine Firmware (EFI).
+#-------------------------------------------------------------------------------
+OVMF_DIR="${HOME}/QEMU/OVMF"
+${MKDIR_BIN} --parents "${OVMF_DIR}"
+cd "${OVMF_DIR}"
+download_zip "http://netcologne.dl.sourceforge.net/project/edk2/OVMF/OVMF-X64-r15214.zip"
+
+#-------------------------------------------------------------------------------
+# Download newest OS X booloader from:
+#   - Enoch (http://www.insanelymac.com/forum/files/file/71-enoch/)
+#       supports up to El Capitan (10.11) in virtual machines
+#   or
+#   - Chimera (http://www.tonymacx86.com/downloads.php?do=file&id=258)
+#       supports up to Yosemite (10.10), but only on real hardware
+#   or
+#   - Chameleon (http://chameleon.osx86.hu/)
+#       supports up to Mavericks (10.9) in virutal machines
+#-------------------------------------------------------------------------------
+OSX_DIR="${HOME}/QEMU/OSX"
+${MKDIR_BIN} --parents "${OSX_DIR}"
+cd "${OSX_DIR}"
+${WGET_BIN} --no-clobber "https://neumannsland.de/Enoch-rev.2795_boot"
+if [ "${?}" -eq "0" ] ; then
+  success "download of Enoch-rev.2795_boot completed"
+else
+  error_exit "download of Enoch-rev.2795_boot failed"
+fi
+
+#-------------------------------------------------------------------------------
+# Ignore MSR readout on host by VM (needed for OS X >10.9!).
+#-------------------------------------------------------------------------------
+# 1. for the running system
+${SUDO_BIN} ${SU_BIN} - --command \
+  'echo 1 > /sys/module/kvm/parameters/ignore_msrs'
+if [ "$( ${CAT_BIN} /sys/module/kvm/parameters/ignore_msrs )" = "Y" ] ; then
+  success "ignore MSR activated"
+else
+  error_exit "activation for ignore MSR failed"
+fi
+
+# 2. survive reboots
+${SUDO_BIN} ${SU_BIN} - --command \
+  'echo "module/kvm/parameters/ignore_msrs = 1" > /etc/sysfs.d/kvm.conf'
+if ${GREP_BIN} --fixed-strings "module/kvm/parameters/ignore_msrs = 1" \
+/etc/sysfs.d/kvm.conf > /dev/null 2>&1 ; then
+  success "ignore MSR at boot time activated"
+else
+  error_exit "activation for ignore MSR at boot time failed"
+fi
+
+#-------------------------------------------------------------------------------
+# Disable automount in gnome for more usability for converting to external hdd.
+#-------------------------------------------------------------------------------
+readonly MEDIA_HANDLING="org.gnome.desktop.media-handling"
+if [ "$( /usr/bin/gsettings get ${MEDIA_HANDLING} automount-open )" != "false" ] ; then
+  /usr/bin/gsettings set "${MEDIA_HANDLING}" automount-open false
+fi
+if [ "$( /usr/bin/gsettings get ${MEDIA_HANDLING} automount )" != "false" ] ; then
+  /usr/bin/gsettings set "${MEDIA_HANDLING}" automount false
+fi
+if [ "$( /usr/bin/gsettings get ${MEDIA_HANDLING} autorun-never )" != "true" ] ; then
+  /usr/bin/gsettings set "${MEDIA_HANDLING}" autorun-never true
+fi
+
+#-------------------------------------------------------------------------------
+# Add current user to group "kvm" if necessary.
+#-------------------------------------------------------------------------------
+LOG_ME_OUT=0
+if ! ${GREP_BIN} --fixed-strings "kvm" <( ${GROUPS_BIN} ) > /dev/null 2>&1 ; then
+  ${SUDO_BIN} ${USERMOD_BIN} --append --groups kvm "${USER}"
+  if [ "${?}" -eq "0" ] ; then
+    success "user ${USER} added to group kvm"
+  else
+    error_exit "adding user ${USER} to group kvm failed"
+  fi
+  LOG_ME_OUT=1
+else
+  hint "user ${USER} is already member of group kvm"
+fi
+
+#-------------------------------------------------------------------------------
+# Log user out if necessary (thus the effects of changing permissions).
+#-------------------------------------------------------------------------------
+success "all done"
+if [ "${LOG_ME_OUT}" -eq "1" ] ; then
+  hint "please let logout in 3 seconds and login again"
+  ${SLEEP_BIN} 3
+  ${GSQ_BIN} --logout
+fi
+
+exit 0

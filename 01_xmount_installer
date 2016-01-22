@@ -1,0 +1,281 @@
+#!/bin/bash
+#===============================================================================
+# DIRECTORY:
+#   ---
+#
+# FILE:
+#   01_xmount_installer
+#
+# USAGE:
+#   bash 01_xmount_installer
+#
+# OPTIONS:
+#   none
+#
+# DESCRIPTION:
+#   Installs xmount...
+#
+# REQUIREMENTS:
+#   bash, ...
+#
+# BUGS:
+#   ---
+#
+# NOTES:
+#   Tested on Debian 8.
+#
+# AUTHOR:
+#   Patrick Neumann, patrick@neumannsland.de
+#
+# COMPANY:
+#   (privately)
+#
+# VERSION:
+#   0.9 (beta)
+#
+# LINK TO THE MOST CURRENT VERSIONS:
+#   https://raw.githubusercontent.com/casualscripter/debian-stuff/master/home/user/bin/
+#
+# CREATED:
+#   20.11.2015
+#
+# COPYRIGHT (C):
+#   2015 - Patrick Neumann
+#
+# LICENSE:
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+# WARRANTY:
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# TODO:
+#   - more DRY (don't repeat yourself)
+#
+# HISTORY:
+#   0.9 - Patrick Neumann - Initial (public) release
+#===============================================================================
+
+#=== CONFIGURATION =============================================================
+WHICH_BIN="/usr/bin/which"                                  # Debian 8.x default
+PRINTF_BIN="$( ${WHICH_BIN} printf )"
+SUDO_BIN="$( ${WHICH_BIN} sudo )"                       # needs configured sudo!
+APTITUDE_BIN="$( ${WHICH_BIN} aptitude )"
+SLEEP_BIN="$( ${WHICH_BIN} sleep )"
+EXPR_BIN="$( ${WHICH_BIN} expr )"
+CAT_BIN="$( ${WHICH_BIN} cat )"
+PGREP_BIN="$( ${WHICH_BIN} pgrep )"
+GNOMESHELL_BIN="$( ${WHICH_BIN} gnome-shell )"
+WGET_BIN="$( ${WHICH_BIN} wget )"
+GREP_BIN="$( ${WHICH_BIN} grep )"
+GROUPS_BIN="$( ${WHICH_BIN} groups )"
+USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} usermod )"     # needs configured sudo!
+GSQ_BIN="$( ${WHICH_BIN} gnome-session-quit )"
+APTKEY_BIN="$( ${WHICH_BIN} apt-key )"
+SED_BIN="$( ${WHICH_BIN} sed )"
+
+#=== FUNCTION ==================================================================
+# NAME: error_exit
+# DESCRIPTION: Display red error messages surrounded by "ERROR:" and "EXIT!!!".
+# PARAMETER 1: message (string)
+#===============================================================================
+error_exit () {
+  "${PRINTF_BIN}" "\n\033[01;31;40mERROR: ${1}... EXIT!!!\033[00m\n\n"
+  exit 1
+}
+
+#=== FUNCTION ==================================================================
+# NAME: error
+# DESCRIPTION: Display red error messages starting with "ERROR:".
+# PARAMETER 1: message (string)
+#===============================================================================
+error () {
+  "${PRINTF_BIN}" "\033[01;31;40mERROR: ${1}!!!\033[00m\n"
+}
+
+#=== FUNCTION ==================================================================
+# NAME: hint
+# DESCRIPTION: Display blue hint messages starting with "HINT:".
+# PARAMETER 1: message (string)
+#===============================================================================
+hint () {
+  "${PRINTF_BIN}" "\033[01;34;40mHINT: ${1}!\033[00m\n"
+}
+
+#=== FUNCTION ==================================================================
+# NAME: success
+# DESCRIPTION: Display green success messages starting with "SUCCESS:".
+# PARAMETER 1: message (string)
+#===============================================================================
+success () {
+  "${PRINTF_BIN}" "\033[01;32;40mSUCCESS: ${1}!\033[00m\n"
+}
+
+#=== FUNCTION ==================================================================
+# NAME: install_if_necessary
+# DESCRIPTION: Check if binary exists and (try to) install package if not.
+# PARAMETER 1: absolute path to binary (string)
+# PARAMETER 2: package name (string)
+#===============================================================================
+install_if_necessary () {
+  if [ ! -x "${1}" ] ; then
+    ${SUDO_BIN} ${APTITUDE_BIN} install ${2} --assume-yes
+    if [ "${?}" -eq "0" ] ; then
+      success "installation of ${2} completed"
+    else
+      error_exit "installation of ${2} failed"
+    fi
+  else
+    hint "${2} already installed"
+  fi
+  ${SLEEP_BIN} 2
+}
+
+#-------------------------------------------------------------------------------
+# Check vor Debian GNU/Linux.
+#-------------------------------------------------------------------------------
+if ! [ -f "/etc/debian_version" ] ; then
+  error_exit "Debian GNU/Linux not found"
+fi
+
+#-------------------------------------------------------------------------------
+# Check vor Version 8 (jessie) or greater.
+#-------------------------------------------------------------------------------
+if ! ${EXPR_BIN} "$( ${CAT_BIN} /etc/debian_version )" \>= 8.0 > /dev/null 2>&1 ; then
+  error_exit "Debian GNU/Linux >= 8.0 not found"
+fi
+
+#-------------------------------------------------------------------------------
+# Check vor a running Gnome desktop environment.
+#-------------------------------------------------------------------------------
+if ! ${PGREP_BIN} --full "${GNOMESHELL_BIN}" > /dev/null 2>&1 ; then
+  error_exit "Gnome desktop environment not running"
+fi
+
+#-------------------------------------------------------------------------------
+# Add the repository from pinguin.lu if necessary.
+#-------------------------------------------------------------------------------
+if [ ! -f "/etc/apt/sources.list.d/pinguin.lu.list" ] ; then
+  ${SUDO_BIN} ${WGET_BIN} --no-host-directories --recursive \
+  --directory-prefix="/etc/apt/sources.list.d/" http://deb.pinguin.lu/pinguin.lu.list
+
+  if ${GREP_BIN} --extended-regexp "^deb http://deb.pinguin.lu/" \
+  /etc/apt/sources.list.d/pinguin.lu.list > /dev/null 2>&1 ; then
+    success "repository deb.pinguin.lu added"
+  else
+    error_exit "configuration of repository deb.pinguin.lu failed"
+  fi
+else
+  hint "repository deb.pinguin.lu already configured"
+fi
+
+#-------------------------------------------------------------------------------
+# Add the GPG key for pinguin.lu if necessary.
+#-------------------------------------------------------------------------------
+if ! ${GREP_BIN} --fixed-strings "vogu00@gmail.com" \
+<( ${SUDO_BIN} ${APTKEY_BIN} list ) > /dev/null 2>&1 ; then
+  ${WGET_BIN} --quiet http://deb.pinguin.lu/debsign_public.key --output-document=- \
+  | ${SUDO_BIN} ${APTKEY_BIN} add -
+
+  if ${GREP_BIN} --fixed-strings "vogu00@gmail.com" \
+  <( ${SUDO_BIN} ${APTKEY_BIN} list ) > /dev/null 2>&1 ; then
+    success "GPG key from Guy Voncken added"
+  else
+    error_exit "adding GPG key from Guy Voncken failed"
+  fi
+else
+  hint "GPG key from Guy Voncken already known"
+fi
+
+#-------------------------------------------------------------------------------
+# Updates the list of available packages from the apt sources.
+#-------------------------------------------------------------------------------
+${SUDO_BIN} ${APTITUDE_BIN} update
+success "list of available packages updated"
+${SLEEP_BIN} 2
+
+#-------------------------------------------------------------------------------
+# Install xmount if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/xmount" "xmount"
+
+#-------------------------------------------------------------------------------
+# Install ewf-tools if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/ewfinfo" "ewf-tools"
+
+#-------------------------------------------------------------------------------
+# Install parted if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/sbin/parted" "parted"
+
+#-------------------------------------------------------------------------------
+# Install libhivex-bin if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/hivexget" "libhivex-bin"
+
+#-------------------------------------------------------------------------------
+# Install libwin-hivex-perl if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/hivexregedit" "libwin-hivex-perl"
+
+#-------------------------------------------------------------------------------
+# Install fred if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/fred" "fred fred-reports"
+
+#-------------------------------------------------------------------------------
+# Install chntpw if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/sbin/chntpw" "chntpw"
+
+#-------------------------------------------------------------------------------
+# Install gksudo if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/gksu" "gksu"
+
+#-------------------------------------------------------------------------------
+# Configure fuse.
+#-------------------------------------------------------------------------------
+if ${GREP_BIN} --fixed-strings "#user_allow_other" /etc/fuse.conf > /dev/null 2>&1 ; then
+  ${SUDO_BIN} ${SED_BIN} --in-place "s/\(#\)\(user_allow_other\)/\2/" /etc/fuse.conf
+  if ${GREP_BIN} --extended-regexp "^user_allow_other" /etc/fuse.conf > /dev/null 2>&1 ; then
+    success "fuse configured with user_allow_other"
+  else
+    error_exit "configuration of fuse with user_allow_other failed"
+  fi
+else
+  hint "fuse is already configured with user_allow_other"
+fi
+
+#-------------------------------------------------------------------------------
+# Disable tracker (may interfere with later umount).
+#-------------------------------------------------------------------------------
+readonly MINER="org.freedesktop.Tracker.Miner.Files"
+TRACKER_SETTINGS_CHANGED="false"
+if [ "$( /usr/bin/gsettings get ${MINER} crawling-interval )" -ne "-2" ] ; then
+  /usr/bin/gsettings set "${MINER}" crawling-interval -2
+  TRACKER_SETTINGS_CHANGED="true"
+fi
+if [ "$( /usr/bin/gsettings get ${MINER} enable-monitors )" != "false" ] ; then
+  /usr/bin/gsettings set "${MINER}" enable-monitors false
+  TRACKER_SETTINGS_CHANGED="true"
+fi
+if [ "${TRACKER_SETTINGS_CHANGED}" ==  "true" ] ; then
+  /usr/bin/tracker-control -r
+fi
+
+#-------------------------------------------------------------------------------
+# Log user out if necessary (thus the effects of changing permissions).
+#-------------------------------------------------------------------------------
+success "all done"
+
+exit 0
