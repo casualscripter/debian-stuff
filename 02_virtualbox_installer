@@ -222,7 +222,7 @@ readonly VERSION=$( ${VBOXMANAGE_BIN} --version )
 readonly EXPACK_LIST="$( ${VBOXMANAGE_BIN} list extpacks )"
 if ! echo "${EXPACK_LIST}" \
 | ${GREP_BIN} --fixed-strings "Extension Packs: 0" > /dev/null 2>&1 ; then
-	REPLACE="--replace"
+  REPLACE="--replace"
 fi
 if ! echo "${EXPACK_LIST}" \
 | ${GREP_BIN} --fixed-strings "${VERSION:0:6}" > /dev/null 2>&1 ; then
@@ -231,13 +231,13 @@ if ! echo "${EXPACK_LIST}" \
   EXTPACK="Oracle_VM_VirtualBox_Extension_Pack-${VERSION:0:6}-${VERSION:7:6}.vbox-extpack"
   ${WGET_BIN} --no-clobber "http://${SERVER_DIR}/${EXTPACK}"
   ${SUDO_BIN} -- ${VBOXMANAGE_BIN} extpack install ${REPLACE} "${EXTPACK}"
-	if [ ${?} -eq 0 ] ; then
-  	success "virtualbox extension pack installed/replaced"
+  if [ ${?} -eq 0 ] ; then
+    success "virtualbox extension pack installed/replaced"
   else
-	  error_exit "installation/replacing of virtualbox extension pack failed"
-	fi	
+    error_exit "installation/replacing of virtualbox extension pack failed"
+  fi	
 else
-	hint "virtualbox extension pack is up to date"
+  hint "virtualbox extension pack is up to date"
 fi
 ${SLEEP_BIN} 2
 
