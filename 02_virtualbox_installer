@@ -84,6 +84,7 @@ USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} usermod )"     # needs configured sudo!
 GSQ_BIN="$( ${WHICH_BIN} gnome-session-quit )"
 APTKEY_BIN="$( ${WHICH_BIN} apt-key )"
 SED_BIN="$( ${WHICH_BIN} sed )"
+VBOXMANAGE_BIN="$( ${WHICH_BIN} VBoxManage )"
 
 #=== FUNCTION ==================================================================
 # NAME: error_exit
@@ -213,6 +214,32 @@ install_if_necessary "/usr/bin/virtualbox" \
   "$( ${APTITUDE_BIN} search "virtualbox-[0-9]" \
       | ${AWK_BIN} '{ print $2; }' \
       | ${TAIL_BIN} --lines=1 )"
+
+#-------------------------------------------------------------------------------
+# Install/replace virtualbox extension pack if necessary.
+#-------------------------------------------------------------------------------
+readonly VERSION=$( ${VBOXMANAGE_BIN} --version )
+readonly EXPACK_LIST="$( ${VBOXMANAGE_BIN} list extpacks )"
+if ! echo "${EXPACK_LIST}" \
+| ${GREP_BIN} --fixed-strings "Extension Packs: 0" > /dev/null 2>&1 ; then
+	REPLACE="--replace"
+fi
+if ! echo "${EXPACK_LIST}" \
+| ${GREP_BIN} --fixed-strings "${VERSION:0:6}" > /dev/null 2>&1 ; then
+  cd ~/Downloads
+  SERVER_DIR="download.virtualbox.org/virtualbox/${VERSION:0:6}"
+  EXTPACK="Oracle_VM_VirtualBox_Extension_Pack-${VERSION:0:6}-${VERSION:7:6}.vbox-extpack"
+  ${WGET_BIN} --no-clobber "http://${SERVER_DIR}/${EXTPACK}"
+  ${SUDO_BIN} -- ${VBOXMANAGE_BIN} extpack install ${REPLACE} "${EXTPACK}"
+	if [ ${?} -eq 0 ] ; then
+  	success "virtualbox extension pack installed/replaced"
+  else
+	  error_exit "installation/replacing of virtualbox extension pack failed"
+	fi	
+else
+	hint "virtualbox extension pack is up to date"
+fi
+${SLEEP_BIN} 2
 
 #-------------------------------------------------------------------------------
 # Install dc3dd if necessary.
