@@ -218,7 +218,7 @@ install_if_necessary "/usr/bin/virtualbox" \
 #-------------------------------------------------------------------------------
 # Install/replace virtualbox extension pack if necessary.
 #-------------------------------------------------------------------------------
-readonly VERSION=$( ${VBOXMANAGE_BIN} --version )
+readonly VERSION="$( ${VBOXMANAGE_BIN} --version )"
 readonly EXPACK_LIST="$( ${VBOXMANAGE_BIN} list extpacks )"
 if ! echo "${EXPACK_LIST}" \
 | ${GREP_BIN} --fixed-strings "Extension Packs: 0" > /dev/null 2>&1 ; then
