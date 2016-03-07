@@ -238,6 +238,11 @@ install_if_necessary "/usr/bin/mmls" "sleuthkit"
 install_if_necessary "/sbin/parted" "parted"
 
 #-------------------------------------------------------------------------------
+# Install sleuthkit if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/mmls" "sleuthkit"
+
+#-------------------------------------------------------------------------------
 # Install libhivex-bin if necessary.
 #-------------------------------------------------------------------------------
 install_if_necessary "/usr/bin/hivexget" "libhivex-bin"
