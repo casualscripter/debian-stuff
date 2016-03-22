@@ -1,0 +1,298 @@
+#!/bin/bash
+#===============================================================================
+# DIRECTORY:
+#   ---
+#
+# FILE:
+#   ./multi_sigfind
+#
+# BASIC USAGE
+#     $ ./multi_sigfind -t <template> -i <image>
+#   OR
+#     $ bash multi_sigfind -t <template> -i <image>
+#     $ ksh multi_sigfind -t <template> -i <image>
+#     $ zsh multi_sigfind -t <template> -i <image>
+#     $ dash multi_sigfind -t <template> -i <image>
+#     $ busybox ash multi_sigfind -t <template> -i <image>
+#
+# OPTIONS:
+#   -h : display usage and exit
+#   -t : define template
+#   -i : define image file
+#   -v : print version and exit
+#
+# DESCRIPTION:
+#   ...
+#
+# REQUIREMENTS (Linux):
+#   coreutils (basename, tee, printf,...), sed, grep, gawk or maw, procps,
+#   sleuthkit,...
+#   
+# BUGS:
+#   ---
+#
+# NOTES:
+#   Tested on:
+#     - Debian GNU/Linux 8 + bash, zsh, ksh, busybox ash & dash
+#     - ArchLinux + bash, zsh, ksh, busybox ash & dash
+#     - Gentoo GNU/Linux + bash, zsh, ksh, busybox ash & dash
+#     - Linux Mint 17.3 (Cinnamon) + bash, zsh, ksh, busybox ash & dash
+#     - FreeBSD 10 + bash, zsh & busybox ash
+#     - OS X (10.11.4) + bash (sh) and zsh
+#     ! (t)csh is NOT supported !
+#
+# AUTHOR:
+#   Patrick Neumann, patrick@neumannsland.de
+#
+# COMPANY:
+#   (privately)
+#
+# VERSION:
+#   0.9 (Beta)
+#
+# LINK TO THE MOST CURRENT VERSION:
+#   ...
+#
+# CREATED:
+#   2016-03-22
+#
+# COPYRIGHT (C):
+#   2016 - Patrick Neumann
+#
+# LICENSE:
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+# WARRANTY:
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# NOTE:
+#   ---
+#
+# TODO:
+#   ---
+#
+# HISTORY:
+#   0.9 - Patrick Neumann - Initial release
+#
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+# (t)csh needs too many modifications!
+#   (different "if" syntax, no conditional command, "set" before var="val",...)
+#   Worth reading link: http://www.grymoire.com/unix/CshTop10.txt
+#-------------------------------------------------------------------------------
+test -n "${shell}" \
+  && printf "\n\033[01;31;40m(t)csh is not supported... EXIT\!\!\!\033[00m\n\n" \
+  && exit 1
+
+#=== CONFIGURATION (static) ====================================================
+# Version:
+readonly VERSION="0.9"
+readonly CREATED="2016-03-22"
+
+# Binaries:
+readonly WHICH_BIN="/usr/bin/which"
+readonly BASENAME_BIN="$( ${WHICH_BIN} basename )"
+readonly PS_BIN="$( ${WHICH_BIN} ps )"
+readonly IMG_CAT_BIN="$( ${WHICH_BIN} img_cat )"
+readonly SIGFIND_BIN="$( ${WHICH_BIN} sigfind )"
+readonly TEE_BIN="$( ${WHICH_BIN} tee )"
+readonly HEAD_BIN="$( ${WHICH_BIN} head )"
+readonly SED_BIN="$( ${WHICH_BIN} sed )"
+readonly AWK_BIN="$( ${WHICH_BIN} awk )"
+readonly GREP_BIN="$( ${WHICH_BIN} grep )"
+readonly ECHO_BIN="echo" # should be the shell builtin!
+
+# Signatures:
+readonly EFI_="45464920"
+readonly NTFS="-o 3 4e544653"
+readonly PART="-o 4 50415254"
+readonly FAT1="-o 54 46415431"
+readonly FAT3="-o 82 46415433"
+readonly VBR="-o 510 55aa"
+
+# Misc:
+DEFAULT_SHELL="bash"
+readonly PRAEFIX="sigfind"
+readonly SUFFIX=".txt"
+
+#-------------------------------------------------------------------------------
+# Detect the shell in which we are running.
+#-------------------------------------------------------------------------------
+readonly PROCESS="$( ${BASENAME_BIN} "$( ${PS_BIN} -axco pid,command \
+	                                     | ${GREP_BIN} "$$" \
+																       | ${GREP_BIN} -v "grep" \
+																       | ${AWK_BIN} '{ print $2; }' )" )"
+# Why conditinal command should be prefered over test:
+#   https://google-styleguide.googlecode.com/svn/trunk/shell.xml#Test,_[_and_[[
+# and why you don't, if you would support "dash":
+#   http://mywiki.wooledge.org/Bashism
+if [ "${PROCESS}" = "$( ${BASENAME_BIN} "${0}" )" ] ; then
+  readonly CURRENT_SHELL="${DEFAULT_SHELL}"
+else
+  readonly CURRENT_SHELL="${PROCESS}"
+fi
+
+# Linux can have alle shells and "/bin/echo" has no limitations.
+# Darwin (14.5.0) has bash 3.2.57, zsh 5.0.5, ksh 93 and tcsh 6.17.00
+# - kshs and tcshs builtin echo does not support "-e" and/or "-n"!
+# - "/bin/echo" does not support "-e"!
+# FreeBSD can have all shells, but "/bin/echo" has the same limitations!
+# Solution: use printf instead!
+# Worth readable Link: http://hyperpolyglot.org/unix-shells#echo-note
+if [ "${CURRENT_SHELL}" = "zsh" ] ; then
+	# zsh does not split a string into words separated by spaces by default!
+  setopt shwordsplit
+  # zshs "which" find the builtin without "-p"!
+  readonly PRINTF_BIN="$( which -p printf )"
+else
+	readonly PRINTF_BIN="$( which printf )"
+fi
+
+#=== FUNCTION ==================================================================
+# NAME: usage
+# DESCRIPTION: Display help.
+# PARAMETER 1: -
+#===============================================================================
+usage() {
+  ${PRINTF_BIN} "\nUsage:\n"
+  ${PRINTF_BIN} "  ${0} -t <template> -i <image>\n\n"
+	${PRINTF_BIN} "Options:\n"
+	${PRINTF_BIN} "  -h : display usage and exit\n"
+	${PRINTF_BIN} "  -t : define template\n"
+	${PRINTF_BIN} "  -i : define image file\n"
+	${PRINTF_BIN} "  -v : print version and exit\n\n"
+  ${PRINTF_BIN} "Supported templates:\n"
+  ${PRINTF_BIN} "\tgpt (EFI + PART)\n"
+  ${PRINTF_BIN} "\tfat12 or fat16 (FAT1 + 55aa)\n"
+  ${PRINTF_BIN} "\tfat32 (FAT3 + 55aa)\n"
+  ${PRINTF_BIN} "\tntfs (NTFS + 55aa)\n\n"
+  ${IMG_CAT_BIN} -i list
+  ${PRINTF_BIN} "\n"
+}
+
+version() {
+  ${PRINTF_BIN} "\nVersion: ${VERSION} (created: ${CREATED})\n"
+  ${PRINTF_BIN} "  (with ${CURRENT_SHELL} support)\n\n"
+}
+
+#=== FUNCTION ==================================================================
+# NAME: error_exit
+# DESCRIPTION: Display red error messages surrounded by "ERROR:" and "EXIT!!!".
+# PARAMETER 1: message (string)
+#===============================================================================
+error_exit () {
+  ${PRINTF_BIN} "\n\033[01;31;40mERROR: ${1}... EXIT!!!\033[00m\n\n"
+	usage
+  exit 1
+}
+
+#=== CONFIGURATION (user) ======================================================
+# (-) GNU- and BSD-getopt behave differently
+# (+) getopts is more POSIX and system-/shell-portable
+while getopts ":ht:i:v" opt ; do
+  case $opt in
+    h)
+      usage
+      exit 0
+      ;;
+    t)
+      case "${OPTARG}" in
+        gpt) readonly OPT1="${EFI_}"
+             readonly OPT2="${PART}"
+             COMBINED="EFI_PART"
+             ;;
+        fat12|fat16) readonly OPT1="${FAT1}"
+                     readonly OPT2="${VBR}"
+                     COMBINED="FAT1x_VBR"
+                     ;;
+        fat32) readonly OPT1="${FAT3}"
+               readonly OPT2="${VBR}"
+               COMBINED="FAT32_VBR"
+               ;;
+        ntfs) readonly OPT1="${NTFS}"
+              readonly OPT2="${VBR}"
+              COMBINED="NTFS_VBR"
+              ;;
+        *) error_exit "Template not supported"
+           ;;
+      esac
+      ;;
+    i)
+      if ! [ -f "${OPTARG}" ] ; then
+        error_exit "Image not found"
+      fi
+      readonly IMAGE="${OPTARG}"
+      ;;
+    v)
+      version
+      exit 0
+	    ;;
+    \?)
+      error_exit "Invalid option"
+      ;;
+    :)
+      error_exit "Option -${OPTARG} requires an argument"
+      ;;
+  esac
+done
+
+#-------------------------------------------------------------------------------
+# Check for template.
+#-------------------------------------------------------------------------------
+if [ -z "${COMBINED}" ] ; then
+  error_exit "No template given"
+fi
+
+#-------------------------------------------------------------------------------
+# Check for image.
+#-------------------------------------------------------------------------------
+if [ -z "${IMAGE}" ] ; then
+  error_exit "No image given"
+fi
+
+#=== CONFIGURATION (dynamic) ===================================================
+readonly COMBINED="${PRAEFIX}_${COMBINED}_${IMAGE%.*}${SUFFIX}"
+readonly TMP1="${PRAEFIX}_${OPT1##* }_${IMAGE%.*}.tmp"
+readonly TMP2="${PRAEFIX}_${OPT2##* }_${IMAGE%.*}.tmp"
+
+#-------------------------------------------------------------------------------
+# First run.
+#-------------------------------------------------------------------------------
+if ! [ -f "${TMP1}" ] ; then
+  ${SIGFIND_BIN} ${OPT1} "${IMAGE}" 2>/dev/null > "${TMP1}"
+fi
+# BSD head does not support long options!
+${HEAD_BIN} -n 1 "${TMP1}" | ${TEE_BIN} "${COMBINED}"
+# BSD tee does not support long options!
+${ECHO_BIN} " AND" | ${TEE_BIN} -a "${COMBINED}"
+
+#-------------------------------------------------------------------------------
+# Second run.
+#-------------------------------------------------------------------------------
+TMP2="${PRAEFIX}_${OPT2##* }_${IMAGE%.*}.tmp"
+if ! [ -f "${TMP2}" ] ; then
+  ${SIGFIND_BIN} ${OPT2} "${IMAGE}" 2>/dev/null > "${TMP2}"
+fi
+${HEAD_BIN} -n 1 "${TMP2}" | ${TEE_BIN} -a "${COMBINED}"
+${ECHO_BIN} | ${TEE_BIN} -a "${COMBINED}"
+
+#-------------------------------------------------------------------------------
+# Intersection of first and second run.
+#-------------------------------------------------------------------------------
+for block in $( ${SED_BIN} '1 d' "${TMP1}" | ${AWK_BIN} '{ print $2; }' ) ; do
+  ${GREP_BIN} --extended-regexp "Block: ${block} \(.*\)" "${TMP2}" \
+		| ${SED_BIN} 's/ (.*)$//' \
+		| ${TEE_BIN} -a "${COMBINED}"
+done
+
+exit 0
