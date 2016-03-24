@@ -150,12 +150,12 @@ fi
 # Solution: use printf instead!
 # Worth readable Link: http://hyperpolyglot.org/unix-shells#echo-note
 if [ "${CURRENT_SHELL}" = "zsh" ] ; then
-	# zsh does not split a string into words separated by spaces by default!
+  # zsh does not split a string into words separated by spaces by default!
   setopt shwordsplit
   # zshs "which" find the builtin without "-p"!
   readonly PRINTF_BIN="$( which -p printf )"
 else
-	readonly PRINTF_BIN="$( which printf )"
+  readonly PRINTF_BIN="$( which printf )"
 fi
 
 #=== FUNCTION ==================================================================
@@ -166,11 +166,11 @@ fi
 usage() {
   ${PRINTF_BIN} "\nUsage:\n"
   ${PRINTF_BIN} "  ${0} -t <template> -i <image>\n\n"
-	${PRINTF_BIN} "Options:\n"
-	${PRINTF_BIN} "  -h : display usage and exit\n"
-	${PRINTF_BIN} "  -t : define template\n"
-	${PRINTF_BIN} "  -i : define image file\n"
-	${PRINTF_BIN} "  -v : print version and exit\n\n"
+  ${PRINTF_BIN} "Options:\n"
+  ${PRINTF_BIN} "  -h : display usage and exit\n"
+  ${PRINTF_BIN} "  -t : define template\n"
+  ${PRINTF_BIN} "  -i : define image file\n"
+  ${PRINTF_BIN} "  -v : print version and exit\n\n"
   ${PRINTF_BIN} "Supported templates:\n"
   ${PRINTF_BIN} "\tgpt (EFI + PART)\n"
   ${PRINTF_BIN} "\tfat12 or fat16 (FAT1 + 55aa)\n"
@@ -192,7 +192,7 @@ version() {
 #===============================================================================
 error_exit () {
   ${PRINTF_BIN} "\n\033[01;31;40mERROR: ${1}... EXIT!!!\033[00m\n\n"
-	usage
+  usage
   exit 1
 }
 
@@ -261,9 +261,14 @@ if [ -z "${IMAGE}" ] ; then
 fi
 
 #=== CONFIGURATION (dynamic) ===================================================
-readonly COMBINED="${PRAEFIX}_${COMBINED}_${IMAGE%.*}${SUFFIX}"
-readonly TMP1="${PRAEFIX}_${OPT1##* }_${IMAGE%.*}.tmp"
-readonly TMP2="${PRAEFIX}_${OPT2##* }_${IMAGE%.*}.tmp"
+readonly COMBINED="${PRAEFIX}_${COMBINED}_$( ${BASENAME_BIN} ${IMAGE%.*} )${SUFFIX}"
+readonly TMP1="${PRAEFIX}_${OPT1##* }_$( ${BASENAME_BIN} ${IMAGE%.*} ).tmp"
+readonly TMP2="${PRAEFIX}_${OPT2##* }_$( ${BASENAME_BIN} ${IMAGE%.*} ).tmp"
+
+#-------------------------------------------------------------------------------
+# Two passes take some time longer...
+#-------------------------------------------------------------------------------
+${PRINTF_BIN} "\n\033[01;34;40mTwo passes take some time longer... PLEASE WAIT...\033[00m\n\n"
 
 #-------------------------------------------------------------------------------
 # First run.
@@ -279,7 +284,6 @@ ${ECHO_BIN} " AND" | ${TEE_BIN} -a "${COMBINED}"
 #-------------------------------------------------------------------------------
 # Second run.
 #-------------------------------------------------------------------------------
-TMP2="${PRAEFIX}_${OPT2##* }_${IMAGE%.*}.tmp"
 if ! [ -f "${TMP2}" ] ; then
   ${SIGFIND_BIN} ${OPT2} "${IMAGE}" 2>/dev/null > "${TMP2}"
 fi
