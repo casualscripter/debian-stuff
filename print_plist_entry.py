@@ -71,10 +71,6 @@ import os.path
 import plistlib
 import sys
 
-# sometimes we need UTF-8 support
-reload( sys )
-sys.setdefaultencoding( "utf-8" )
-
 # short help for new users
 def usage():
   print "\nUsage: python print_plist_entry.py <plist> <key>\n"
@@ -115,10 +111,16 @@ def print_entry( c ):
       print_entry( v )
     else:
       if key == "ALL":
-        print "{0}: {1}".format( k, v ) 
+        try:
+          print "{0}: {1}".format( k, v ) 
+        except UnicodeEncodeError:
+          print "{0}: {1}".format( k, v.encode( "utf-8" ) )
       else:
         if k == key:
-          print "{0}: {1}".format( k, v ) 
+          try:
+            print "{0}: {1}".format( k, v ) 
+          except UnicodeEncodeError:
+            print "{0}: {1}".format( k, v.encode( "utf-8" ) )
 
 # the wonder
 print_entry( content )
