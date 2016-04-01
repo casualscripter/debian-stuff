@@ -42,7 +42,7 @@
 #   23.03.2016
 #
 # COPYRIGHT (C):
-#   2016 - Patrick Neumann
+#   2015-2016 - Patrick Neumann
 #
 # LICENSE:
 #   This program is free software: you can redistribute it and/or modify
@@ -64,12 +64,18 @@
 #
 # HISTORY:
 #   0.9 - Patrick Neumann - Initial (public) release
+#
 #===============================================================================
 
 import os.path
-import sys
 import plistlib
+import sys
 
+# sometimes we need UTF-8 support
+reload( sys )
+sys.setdefaultencoding( "utf-8" )
+
+# short help for new users
 def usage():
   print "\nUsage: python print_plist_entry.py <plist> <key>\n"
   print "  (use the <key> \"ALL\" to list all entries.)\n"
@@ -97,19 +103,24 @@ except IndexError:
 
 # plist has to be a XML file
 try:
-  dict = plistlib.readPlist( plist )
+  content = plistlib.readPlist( plist )
 except:
   print "\nError: plist is not a XML file!\n"
   sys.exit( 1 )
 
-# print ALL or single key-value pair
-if key == "ALL":
-  for i in dict:
-    print i + ":", dict[ i ]
-else:
-  try:
-    print key + ":", dict[ key ]
-  except KeyError:
-    print "Key", key, "not found!"
+# simple function (incl. iteration)
+def print_entry( c ):
+  for k, v in c.iteritems():
+    if isinstance( v, dict ):
+      print_entry( v )
+    else:
+      if key == "ALL":
+        print "{0}: {1}".format( k, v ) 
+      else:
+        if k == key:
+          print "{0}: {1}".format( k, v ) 
+
+# the wonder
+print_entry( content )
 
 sys.exit( 0 )
