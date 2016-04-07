@@ -40,7 +40,7 @@
 #   20.11.2015
 #
 # COPYRIGHT (C):
-#   2015 - Patrick Neumann
+#   2015-2016 - Patrick Neumann
 #
 # LICENSE:
 #   This program is free software: you can redistribute it and/or modify
@@ -62,6 +62,7 @@
 #
 # HISTORY:
 #   0.9 - Patrick Neumann - Initial (public) release
+#
 #===============================================================================
 
 #=== CONFIGURATION =============================================================
@@ -81,6 +82,8 @@ USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} usermod )"     # needs configured sudo!
 GSQ_BIN="$( ${WHICH_BIN} gnome-session-quit )"
 APTKEY_BIN="$( ${WHICH_BIN} apt-key )"
 SED_BIN="$( ${WHICH_BIN} sed )"
+CHOWN_BIN="$( ${WHICH_BIN} chown )"
+CHMOD_BIN="$( ${WHICH_BIN} chmod )"
 
 #=== FUNCTION ==================================================================
 # NAME: error_exit
@@ -137,6 +140,18 @@ install_if_necessary () {
     hint "${2} already installed"
   fi
   ${SLEEP_BIN} 2
+}
+
+#=== FUNCTION ==================================================================
+# NAME: download_if_necessary
+# DESCRIPTION: Download (and update) single binary/script incl. chmod/chown.
+# PARAMETER 1: URI
+#===============================================================================
+download_if_necessary() {
+  readonly PREFIX="/usr/local/bin/"
+  ${SUDO_BIN} ${WGET_BIN} --timestamping --directory-prefix="${PREFIX}" "${1}"
+	${SUDO_BIN} ${CHOWN_BIN} root:root "${PREFIX}/${1##*/}"
+	${SUDO_BIN} ${CHMOD_BIN} 755 "${PREFIX}/${1##*/}"
 }
 
 #-------------------------------------------------------------------------------
@@ -213,6 +228,11 @@ install_if_necessary "/usr/bin/xmount" "xmount"
 install_if_necessary "/usr/bin/ewfinfo" "ewf-tools"
 
 #-------------------------------------------------------------------------------
+# Install The Sleuth Kit if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/mmls" "sleuthkit"
+
+#-------------------------------------------------------------------------------
 # Install parted if necessary.
 #-------------------------------------------------------------------------------
 install_if_necessary "/sbin/parted" "parted"
@@ -238,9 +258,21 @@ install_if_necessary "/usr/bin/fred" "fred fred-reports"
 install_if_necessary "/usr/sbin/chntpw" "chntpw"
 
 #-------------------------------------------------------------------------------
+# Install libplist-utils if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/plistutil" "libplist-utils"
+
+#-------------------------------------------------------------------------------
 # Install gksudo if necessary.
 #-------------------------------------------------------------------------------
 install_if_necessary "/usr/bin/gksu" "gksu"
+
+#-------------------------------------------------------------------------------
+# Download single binary/script if necessary.
+#-------------------------------------------------------------------------------
+download_if_necessary "https://raw.githubusercontent.com/casualscripter/debian-stuff/master/multi_sigfind"
+download_if_necessary "https://raw.githubusercontent.com/casualscripter/debian-stuff/master/print_plist_entry.py"
+download_if_necessary "https://raw.githubusercontent.com/casualscripter/mac-osx-forensics/master/kcpass.py"
 
 #-------------------------------------------------------------------------------
 # Configure fuse.
