@@ -267,7 +267,7 @@ readonly TMP2="${PRAEFIX}_${OPT2##* }_$( ${BASENAME_BIN} ${IMAGE%.*} ).tmp"
 #-------------------------------------------------------------------------------
 # Two passes take some time longer...
 #-------------------------------------------------------------------------------
-${PRINTF_BIN} "\n\033[01;34;40mTwo passes take some time longer... PLEASE WAIT...\033[00m\n\n"
+${PRINTF_BIN} "\n\033[01;34;40mTwo passes of sigfind (TSK) take some time longer... PLEASE WAIT...\033[00m\n\n"
 
 #-------------------------------------------------------------------------------
 # First run.
