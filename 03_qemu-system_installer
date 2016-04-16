@@ -208,10 +208,10 @@ install_if_necessary "/usr/bin/qemu-system-x86_64" "qemu-system-x86"
 #-------------------------------------------------------------------------------
 install_if_necessary "/usr/bin/qemu-system-arm" "qemu-system-arm"
 
-#-------------------------------------------------------------------------------
-# Install sysfsutils if necessary.
-#-------------------------------------------------------------------------------
-install_if_necessary "/usr/bin/systool" "sysfsutils"
+##-------------------------------------------------------------------------------
+## Install sysfsutils if necessary.
+##-------------------------------------------------------------------------------
+#install_if_necessary "/usr/bin/systool" "sysfsutils"
 
 #-------------------------------------------------------------------------------
 # Install vinagre if necessary.
@@ -264,10 +264,10 @@ else
   error_exit "download of Enoch-rev.2795_boot failed"
 fi
 
-#-------------------------------------------------------------------------------
-# Ignore MSR readout on host by VM (needed for OS X >10.9!).
-#-------------------------------------------------------------------------------
-# 1. for the running system
+##-------------------------------------------------------------------------------
+## Ignore MSR readout on host by VM (needed for OS X >10.9!).
+##-------------------------------------------------------------------------------
+## 1. for the running system
 ${SUDO_BIN} ${SU_BIN} - --command \
   'echo 1 > /sys/module/kvm/parameters/ignore_msrs'
 if [ "$( ${CAT_BIN} /sys/module/kvm/parameters/ignore_msrs )" = "Y" ] ; then
@@ -276,15 +276,17 @@ else
   error_exit "activation for ignore MSR failed"
 fi
 
-# 2. survive reboots
-${SUDO_BIN} ${SU_BIN} - --command \
-  'echo "module/kvm/parameters/ignore_msrs = 1" > /etc/sysfs.d/kvm.conf'
-if ${GREP_BIN} --fixed-strings "module/kvm/parameters/ignore_msrs = 1" \
-/etc/sysfs.d/kvm.conf > /dev/null 2>&1 ; then
-  success "ignore MSR at boot time activated"
-else
-  error_exit "activation for ignore MSR at boot time failed"
-fi
+## 2. survive reboots
+#${SUDO_BIN} ${SU_BIN} - --command \
+#  'echo "module/kvm/parameters/ignore_msrs = 1" > /etc/sysfs.d/kvm.conf'
+#if ${GREP_BIN} --fixed-strings "module/kvm/parameters/ignore_msrs = 1" \
+#/etc/sysfs.d/kvm.conf > /dev/null 2>&1 ; then
+#  success "ignore MSR at boot time activated"
+#else
+#  error_exit "activation for ignore MSR at boot time failed"
+#fi
+
+sudo su - -c 'echo "options kvm ignore_msrs=1" > /etc/modprobe.d/kvm.conf'
 
 #-------------------------------------------------------------------------------
 # Disable automount in gnome for more usability for converting to external hdd.
