@@ -260,9 +260,9 @@ if [ -z "${IMAGE}" ] ; then
 fi
 
 #=== CONFIGURATION (dynamic) ===================================================
-readonly COMBINED="${PRAEFIX}_${COMBINED}_$( ${BASENAME_BIN} ${IMAGE%.*} )${SUFFIX}"
-readonly TMP1="${PRAEFIX}_${OPT1##* }_$( ${BASENAME_BIN} ${IMAGE%.*} ).tmp"
-readonly TMP2="${PRAEFIX}_${OPT2##* }_$( ${BASENAME_BIN} ${IMAGE%.*} ).tmp"
+readonly COMBINED="${PRAEFIX}_${COMBINED}_$( ${BASENAME_BIN} "${IMAGE%.*}" )${SUFFIX}"
+readonly TMP1="${PRAEFIX}_${OPT1##* }_$( ${BASENAME_BIN} "${IMAGE%.*}" ).tmp"
+readonly TMP2="${PRAEFIX}_${OPT2##* }_$( ${BASENAME_BIN} "${IMAGE%.*}" ).tmp"
 
 #-------------------------------------------------------------------------------
 # Two passes take some time longer...
