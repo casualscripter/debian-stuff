@@ -65,26 +65,26 @@
 #===============================================================================
 
 #=== CONFIGURATION =============================================================
-WHICH_BIN="/usr/bin/which"                                  # Debian 8.x default
-PRINTF_BIN="$( ${WHICH_BIN} printf )"
-SUDO_BIN="$( ${WHICH_BIN} sudo )"                       # needs configured sudo!
-SU_BIN="$( ${WHICH_BIN} su )"
-APTITUDE_BIN="$( ${WHICH_BIN} aptitude )"
-SLEEP_BIN="$( ${WHICH_BIN} sleep )"
-EXPR_BIN="$( ${WHICH_BIN} expr )"
-CAT_BIN="$( ${WHICH_BIN} cat )"
-PGREP_BIN="$( ${WHICH_BIN} pgrep )"
-GNOMESHELL_BIN="$( ${WHICH_BIN} gnome-shell )"
-WGET_BIN="$( ${WHICH_BIN} wget )"
-GREP_BIN="$( ${WHICH_BIN} grep )"
-AWK_BIN="$( ${WHICH_BIN} awk )"
-TAIL_BIN="$( ${WHICH_BIN} tail )"
-GROUPS_BIN="$( ${WHICH_BIN} groups )"
-USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} usermod )"     # needs configured sudo!
-GSQ_BIN="$( ${WHICH_BIN} gnome-session-quit )"
-APTKEY_BIN="$( ${WHICH_BIN} apt-key )"
-SED_BIN="$( ${WHICH_BIN} sed )"
-VBOXMANAGE_BIN="$( ${WHICH_BIN} VBoxManage )"
+readonly WHICH_BIN="/usr/bin/which"                         # Debian 8.x default
+readonly PRINTF_BIN="$( ${WHICH_BIN} printf )"
+readonly SUDO_BIN="$( ${WHICH_BIN} sudo )"              # needs configured sudo!
+readonly SU_BIN="$( ${WHICH_BIN} su )"
+readonly APTITUDE_BIN="$( ${WHICH_BIN} aptitude )"
+readonly SLEEP_BIN="$( ${WHICH_BIN} sleep )"
+readonly EXPR_BIN="$( ${WHICH_BIN} expr )"
+readonly CAT_BIN="$( ${WHICH_BIN} cat )"
+readonly PGREP_BIN="$( ${WHICH_BIN} pgrep )"
+readonly GNOMESHELL_BIN="$( ${WHICH_BIN} gnome-shell )"
+readonly WGET_BIN="$( ${WHICH_BIN} wget )"
+readonly GREP_BIN="$( ${WHICH_BIN} grep )"
+readonly AWK_BIN="$( ${WHICH_BIN} awk )"
+readonly TAIL_BIN="$( ${WHICH_BIN} tail )"
+readonly GROUPS_BIN="$( ${WHICH_BIN} groups )"
+readonly USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} usermod )"         # see sudo!
+readonly GSQ_BIN="$( ${WHICH_BIN} gnome-session-quit )"
+readonly APTKEY_BIN="$( ${WHICH_BIN} apt-key )"
+readonly SED_BIN="$( ${WHICH_BIN} sed )"
+# place VBOXMANAGE_BIN after installation of virtualbox!
 
 #=== FUNCTION ==================================================================
 # NAME: error_exit
@@ -214,6 +214,7 @@ install_if_necessary "/usr/bin/virtualbox" \
   "$( ${APTITUDE_BIN} search "virtualbox-[0-9]" \
       | ${AWK_BIN} '{ print $2; }' \
       | ${TAIL_BIN} --lines=1 )"
+VBOXMANAGE_BIN="$( ${WHICH_BIN} VBoxManage )"
 
 #-------------------------------------------------------------------------------
 # Install/replace virtualbox extension pack if necessary.
