@@ -187,7 +187,7 @@ fi
 #-------------------------------------------------------------------------------
 if ! ${GREP_BIN} --fixed-strings "info@virtualbox.org" \
 <( ${SUDO_BIN} ${APTKEY_BIN} list ) > /dev/null 2>&1 ; then
-  ${WGET_BIN} --quiet http://download.virtualbox.org/virtualbox/debian/oracle_vbox.asc \
+  ${WGET_BIN} --quiet http://download.virtualbox.org/virtualbox/debian/oracle_vbox_2016.asc \
   --output-document=- | ${SUDO_BIN} ${APTKEY_BIN} add -
 
   if ${GREP_BIN} --fixed-strings "info@virtualbox.org" \
