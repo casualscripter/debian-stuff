@@ -1,0 +1,256 @@
+#!/bin/bash
+#===============================================================================
+# DIRECTORY:
+#   ---
+#
+# FILE:
+#   ./email_regexp_generator
+#
+# BASIC USAGE
+#     $ ./email_regexp_generator
+#     $ ./email_regexp_generator > email_extended_regexp
+#     $ curl -s http://domain.tld/site-with-emails.html | grep -E -o "$( ./email_regexp_generator )" | sort | uniq
+#   OR
+#     $ bash email_regexp_generator
+#     $ ksh email_regexp_generator
+#     $ zsh email_regexp_generator
+#     $ dash email_regexp_generator
+#     $ busybox ash email_regexp_generator
+#
+# OPTIONS:
+#   -c : activate caching
+#   -h : display usage and exit
+#   -v : print version and exit
+#
+# DESCRIPTION:
+#   This simple script generates an nearly 99% exact regular expression
+#     with all "TLDs" from the "Root Zone Database" for direct or later use
+#     with eg. grep.
+#
+# REQUIREMENTS (Linux):
+#   coreutils, sed, grep, gawk or maw, procps and curl.
+#   
+# BUGS:
+#   ---
+#
+# NOTES:
+#   Tested on (TODO):
+#     - Debian GNU/Linux 8 + bash, zsh, ksh, busybox ash & dash (CHECKED!)
+#     - ArchLinux + bash, zsh, ksh, busybox ash & dash (CHECKED!)
+#     - Linux Mint 17.3 (Cinnamon) + bash, zsh, ksh, busybox ash & dash (CHECKED!)
+#     - FreeBSD 10 + bash, zsh & ksh (busybox ash currently not working) (CHECKED!)
+#     - OS X (10.11.5) + bash (sh) and zsh (CHECKED!)
+#     ! (t)csh is NOT supported !
+#
+# AUTHOR:
+#   Patrick Neumann, patrick@neumannsland.de
+#
+# COMPANY:
+#   (privately)
+#
+# VERSION:
+#   0.9 (Beta)
+#
+# LINK TO THE MOST CURRENT VERSION:
+#   https://raw.githubusercontent.com/casualscripter/debian-stuff/master/email_regexp_generator
+#
+# CREATED:
+#   2016-06-17
+#
+# COPYRIGHT (C):
+#   2016 - Patrick Neumann
+#
+# LICENSE:
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+# WARRANTY:
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# NOTE:
+#   ---
+#
+# TODO:
+#   - add some error handling?
+#   - need more testing!
+#
+# HISTORY:
+#   0.6 - Patrick Neumann - Initial release (Alpha)
+#   0.9 - Patrick Neumann - Public Beta
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+# (t)csh needs too many modifications!
+#   (different "if" syntax, no conditional command, "set" before var="val",...)
+#   Worth reading link: http://www.grymoire.com/unix/CshTop10.txt
+#-------------------------------------------------------------------------------
+test -n "${shell}" \
+  && printf "\n\033[01;31;40m(t)csh is not supported... EXIT\!\!\!\033[00m\n\n" \
+  && exit 1
+
+#=== CONFIGURATION (static) ====================================================
+# Version:
+readonly VERSION="0.9 (Beta)"
+readonly CREATED="2016-06-17"
+
+# Binaries:
+readonly WHICH_BIN="/usr/bin/which"
+readonly BASENAME_BIN="$( ${WHICH_BIN} basename )"
+readonly PS_BIN="$( ${WHICH_BIN} ps )"
+readonly GREP_BIN="$( ${WHICH_BIN} grep )"
+readonly AWK_BIN="$( ${WHICH_BIN} awk )"
+readonly CURL_BIN="$( ${WHICH_BIN} curl )"
+readonly CAT_BIN="$( ${WHICH_BIN} cat )"
+readonly SED_BIN="$( ${WHICH_BIN} sed )"
+readonly TR_BIN="$( ${WHICH_BIN} tr )"
+
+#-------------------------------------------------------------------------------
+# Detect the shell in which we are running.
+#-------------------------------------------------------------------------------
+readonly PROCESS="$( ${BASENAME_BIN} "$( ${PS_BIN} -axco pid,command \
+	                                     | ${GREP_BIN} "$$" \
+																       | ${GREP_BIN} -v "grep" \
+																       | ${AWK_BIN} '{ print $2; }' )" )"
+# Why conditinal command should be prefered over test:
+#   https://google-styleguide.googlecode.com/svn/trunk/shell.xml#Test,_[_and_[[
+# and why you don't, if you would support "dash":
+#   http://mywiki.wooledge.org/Bashism
+if [ "${PROCESS}" = "$( ${BASENAME_BIN} "${0}" )" ] ; then
+  readonly CURRENT_SHELL="${DEFAULT_SHELL}"
+else
+  readonly CURRENT_SHELL="${PROCESS}"
+fi
+
+# Linux can have alle shells and "/bin/echo" has no limitations.
+# Darwin (14.5.0) has bash 3.2.57, zsh 5.0.5, ksh 93 and tcsh 6.17.00
+# - kshs and tcshs builtin echo does not support "-e" and/or "-n"!
+# - "/bin/echo" does not support "-e"!
+# FreeBSD can have all shells, but "/bin/echo" has the same limitations!
+# Solution: use printf instead!
+# Worth readable Link: http://hyperpolyglot.org/unix-shells#echo-note
+if [ "${CURRENT_SHELL}" = "zsh" ] ; then
+  # zsh does not split a string into words separated by spaces by default!
+  setopt shwordsplit
+  # zshs "which" find the builtin without "-p"!
+  readonly PRINTF_BIN="$( which -p printf )"
+else
+  readonly PRINTF_BIN="$( which printf )"
+fi
+
+readonly CACHE="/tmp/email_regexp_generator-cache"
+readonly ROOTDB_URL="http://www.iana.org/domains/root/db"
+
+#=== FUNCTION ==================================================================
+# NAME: usage
+# DESCRIPTION: Display help.
+# PARAMETER 1: -
+#===============================================================================
+usage() {
+	${PRINTF_BIN} "BASIC USAGE:\n"
+	${PRINTF_BIN} "  ./email_regexp_generator\n"
+	${PRINTF_BIN} "  ./email_regexp_generator > email_extended_regexp\n\n"
+	${PRINTF_BIN} "OR\n"
+	${PRINTF_BIN} "  bash email_regexp_generator\n"
+	${PRINTF_BIN} "  ksh email_regexp_generator\n"
+	${PRINTF_BIN} "  zsh email_regexp_generator\n"
+	${PRINTF_BIN} "  dash email_regexp_generator\n"
+	${PRINTF_BIN} "  busybox ash email_regexp_generator\n\n"
+	${PRINTF_BIN} "ADVANCED USAGE:\n"
+	${PRINTF_BIN} "%s\n" "  curl -s http://domain.tld/site-with-emails.html \\"
+	${PRINTF_BIN} "%s\n" "  > | grep -E -o \"\$( ./email_regexp_generator )\" \\"
+	${PRINTF_BIN} "  > | sort | uniq\n\n"
+	${PRINTF_BIN} "OPTIONS:\n"
+	${PRINTF_BIN} "  -h : display usage and exit\n"
+	${PRINTF_BIN} "  -c : activate caching\n"
+	${PRINTF_BIN} "  -v : print version and exit\n\n"
+}
+
+#=== CONFIGURATION (user) ======================================================
+# (-) GNU- and BSD-getopt behave differently
+# (+) getopts is more POSIX and system-/shell-portable
+while getopts ":hcv" opt ; do
+  case $opt in
+    h  ) readonly GET_HELP="yes" ;;
+    c  ) readonly CACHING="yes" ;;
+    v  ) readonly GET_VERSION_ONLY="yes" ;;
+    \? ) ${PRINTF_BIN} "\n\033[01;31;40mInvalid option: -${OPTARG}\033[00m\n\n" >&2
+			   usage
+         exit 1
+         ;;
+    :  ) ${PRINTF_BIN} "\n\033[01;31;40mOption -${OPTARG} requires an argument.\033[00m\n\n" >&2
+         usage
+         exit 1
+         ;;
+  esac
+done
+
+#=== FUNCTION ==================================================================
+# NAME: error_exit
+# DESCRIPTION: Display red error messages surrounded by "ERROR:" and "EXIT!!!".
+# PARAMETER 1: message (string)
+#===============================================================================
+error_exit () {
+  ${PRINTF_BIN} "\n\033[01;31;40mERROR: ${1}... EXIT!!!\033[00m\n\n"
+  exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Just display version, if "-h" or "-v" is given and exit without error code
+#   if "-v" is given.
+#-------------------------------------------------------------------------------
+if [ "${GET_HELP}" = "yes" -o "${GET_VERSION_ONLY}" = "yes" ] ; then
+  ${PRINTF_BIN} "\nVersion: ${VERSION} (created: ${CREATED})\n\n"
+fi
+if [ "${GET_VERSION_ONLY}" = "yes" ] ; then exit 0 ; fi
+	
+#-------------------------------------------------------------------------------
+# Just display help, if "-h" is given and exit without error code.
+#-------------------------------------------------------------------------------
+if [ "${GET_HELP}" = "yes" ] ; then usage ; exit 0 ; fi
+
+#-------------------------------------------------------------------------------
+# Get content of the Root Zone Database directly or try caching.
+#-------------------------------------------------------------------------------
+if [ "${CACHING}" = "yes" ] ; then
+  if [ -f "${CACHE}" ] ; then
+    $CURL_BIN --output "${CACHE}" --time-cond "${CACHE}" --silent "${ROOTDB_URL}"
+	else
+		$CURL_BIN --output "${CACHE}" --silent "${ROOTDB_URL}"
+	fi
+  readonly ROOTDB="$( $CAT_BIN "${CACHE}" )"
+else
+  readonly ROOTDB="$( ${CURL_BIN} --silent "${ROOTDB_URL}" )"
+fi
+
+#-------------------------------------------------------------------------------
+# Fill konstants with static and dynamic content.
+#
+# Inspired by:
+#   - http://www.regular-expressions.info/email.html
+#   - https://tools.ietf.org/html/rfc5322#section-3.4.1
+#-------------------------------------------------------------------------------
+readonly LOCAL_PART="[a-z0-9\!#$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9\!#$%&'*+/=?^_\`{|}~-]+)*"
+readonly DOMAIN="([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+"
+readonly ALL_TLDS="$( echo "${ROOTDB}" \
+| ${GREP_BIN} -E '<span class="domain tld">.*</span>' \
+| ${SED_BIN} -E 's/(.*<span class="domain tld"><a href="\/domains\/root\/db\/.*\.html">\.)(.*)(<\/a><\/span><\/td>.*)/\2/' \
+| ${GREP_BIN} -v "&#x200f;" \
+| ${TR_BIN} "\n" "|" \
+| ${SED_BIN} 's/.$//' )"
+
+readonly REGEXP="${LOCAL_PART}@${DOMAIN}(${ALL_TLDS})"
+
+#-------------------------------------------------------------------------------
+# Output to stdout.
+#-------------------------------------------------------------------------------
+${PRINTF_BIN} "%s" "${REGEXP}"
+
+exit 0
