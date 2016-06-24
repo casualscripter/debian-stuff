@@ -1,0 +1,268 @@
+#!/bin/bash
+#===============================================================================
+# DIRECTORY:
+#   ---
+#
+# FILE:
+#   ./geoipfilter
+#
+# BASIC USAGE
+#     $ cat file-with-ips | ./geoipfilter
+#   OR
+#     $ cat file-with-ips | bash geoipfilter
+#   OR
+#     $ ./geoipfilter -i file-with-ips
+#   OR
+#     $ bash geoipfilter -i file-with-ips
+#
+# OPTIONS:
+#   -6 : aktivate IPv6 support (default: IPv4)
+#   -h : display usage and exit
+#   -c : define custom contry string (default: DE, Germany)
+#   -i : define custom input file  (default: /dev/stdin)
+#   -p : define custom provider string (default: not set)
+#   -v : print version and exit
+#
+# DESCRIPTION:
+#   This "filter" expects a list of IP addresses (stdin or file), allowing only
+#   the IP addresses by which from a selected country (default: germany) are
+#   and/or were assigned to a selected provider.
+#
+# REQUIREMENTS (Linux):
+#   coreutils (printf), geoiplookup(6) and grep
+#   
+# BUGS:
+#   ---
+#
+# NOTES:
+#   Tested on:
+#     - Debian GNU/Linux (8) + bash
+#     ! (t)csh is NOT supported !
+#
+# AUTHOR:
+#   Patrick Neumann, patrick@neumannsland.de
+#
+# COMPANY:
+#   (privately)
+#
+# VERSION:
+#   1.0
+#
+# LINK TO THE MOST CURRENT VERSION:
+#   https://raw.githubusercontent.com/casualscripter/debian-stuff/master/geoipfilter
+#
+# CREATED:
+#   2016-06-23
+#
+# COPYRIGHT (C):
+#   2015-2016 - Patrick Neumann
+#
+# LICENSE:
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+# WARRANTY:
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# NOTE:
+#   1. Worth readable PDF/Link:
+#        http://lug.fh-swf.de/vim/vim-bash/StyleGuideShell.en.pdf
+#
+# TODO:
+#   More tests:
+#     - Debian GNU/Linux (8) + zsh, ksh, busybox ash & dash
+#     - Gentoo GNU/Linux + bash, zsh, ksh, busybox ash & dash
+#     - Linux Mint 17.2 (Cinnamon) + bash, zsh, ksh, busybox ash & dash
+#     - FreeBSD (10) + bash, zsh & busybox ash
+#     - OS X (10.11.1) + bash (sh) and zsh
+#
+# HISTORY:
+#   0.6 - Patrick Neumann - Internal Aphla
+#   0.9 - Patrick Neumann - Internal Beta
+#   1.0 - Patrick Neumann - Initial public release
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+# (t)csh needs too many modifications!
+#   (different "if" syntax, no conditional command, "set" before var="val",...)
+#   Worth reading link: http://www.grymoire.com/unix/CshTop10.txt
+#-------------------------------------------------------------------------------
+test -n "${shell}" \
+  && printf "\n\033[01;31;40m(t)csh is not supported... EXIT\!\!\!\033[00m\n\n" \
+  && exit 1
+
+#=== CONFIGURATION (static) ====================================================
+# Version:
+readonly VERSION="1.0"
+readonly CREATED="2016-06-23"
+
+# Absolute paths are more secure but less portable.
+readonly WHICH_BIN="/usr/bin/which"
+readonly SUDO_BIN="$( ${WHICH_BIN} sudo )" # has to be configured for the user!
+readonly APTITUDE_BIN="$( ${WHICH_BIN} aptitude )"
+readonly GREP_BIN="$( ${WHICH_BIN} grep )"
+
+# Linux can have alle shells and "/bin/echo" has no limitations.
+# Darwin (14.5.0) has bash 3.2.57, zsh 5.0.5, ksh 93 and tcsh 6.17.00
+# - kshs and tcshs builtin echo does not support "-e" and/or "-n"!
+# - "/bin/echo" does not support "-e"!
+# FreeBSD can have all shells, but "/bin/echo" has the same limitations!
+# Solution: use printf instead!
+# Worth readable Link: http://hyperpolyglot.org/unix-shells#echo-note
+readonly PRINTF_BIN="$( ${WHICH_BIN} printf )"
+
+GEOIPLOOKUP_BIN="$( ${WHICH_BIN} geoiplookup )"
+#-------------------------------------------------------------------------------
+# Check, if geoiplookup and weekly database updates are installed and
+#   install if neccessary.
+#-------------------------------------------------------------------------------
+if [ -z "${GEOIPLOOKUP_BIN}" ] ; then
+	${SUDO_BIN} ${APTITUDE_BIN} install geoip-bin geoip-database-contrib --assume-yes
+	GEOIPLOOKUP_BIN="$( ${WHICH_BIN} geoiplookup )"
+fi
+
+# Defaults:
+GET_HELP="no"
+COUNTRY_STRING="DE, Germany"
+readonly DEFAULT_INPUT_FILE="/dev/stdin"
+CUSTOM_INPUT_FILE=""
+PROVIDER_STRING=""
+GET_VERSION_ONLY="no"
+
+#=== FUNCTION ==================================================================
+# NAME: usage
+# DESCRIPTION: Display help.
+# PARAMETER 1: -
+#===============================================================================
+usage() {
+	${PRINTF_BIN} "BASIC USAGE...\n"
+	${PRINTF_BIN} "  [...]\n\n"
+	${PRINTF_BIN} "OPTIONS:\n"
+	${PRINTF_BIN} "  -6 : aktivate IPv6 support (default: IPv4)\n"
+	${PRINTF_BIN} "  -h : display usage and exit\n"
+	${PRINTF_BIN} "  -c : define contry string (default: DE, Germany)\n"
+	${PRINTF_BIN} "  -i : define input file  (default: /dev/stdin)\n"
+	${PRINTF_BIN} "  -p : define provider string (default: not set)\n"
+	${PRINTF_BIN} "  -v : print version and exit\n\n"
+}
+
+#=== CONFIGURATION (user) ======================================================
+# (-) GNU- and BSD-getopt behave differently
+# (+) getopts is more POSIX and system-/shell-portable
+while getopts ":6hc:i:p:vV" opt ; do
+  case $opt in
+    6  ) GEOIPLOOKUP_BIN="$( ${WHICH_BIN} geoiplookup6 )" ;;
+    h  ) GET_HELP="yes" ;;
+    c  ) COUNTRY_STRING="${OPTARG}" ;;
+    i  ) CUSTOM_INPUT_FILE="${OPTARG}" ;;
+    p  ) PROVIDER_STRING="${OPTARG}" ;;
+    v  ) GET_VERSION_ONLY="yes" ;;
+    \? ) ${PRINTF_BIN} "\n\033[01;31;40mInvalid option: -${OPTARG}\033[00m\n\n" >&2
+			   usage
+         exit 1
+         ;;
+    :  ) ${PRINTF_BIN} "\n\033[01;31;40mOption -${OPTARG} requires an argument.\033[00m\n\n" >&2
+         usage
+         exit 1
+         ;;
+  esac
+done
+
+#=== FUNCTION ==================================================================
+# NAME: error_exit
+# DESCRIPTION: Display red error messages surrounded by "ERROR:" and "EXIT!!!".
+# PARAMETER 1: message (string)
+#===============================================================================
+error_exit () {
+  ${PRINTF_BIN} "\n\033[01;31;40mERROR: ${1}... EXIT!!!\033[00m\n\n"
+  exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Check if a custom input file is given, is plain-text and readable,
+#   then use it, otherwise use the default.
+#-------------------------------------------------------------------------------
+# Why conditinal command should be prefered over test:
+#   https://google-styleguide.googlecode.com/svn/trunk/shell.xml#Test,_[_and_[[
+# and why you don't, if you would support "dash":
+#   http://mywiki.wooledge.org/Bashism
+if [ -n "${CUSTOM_INPUT_FILE}" ] ; then
+  if ! [ -r "${CUSTOM_INPUT_FILE}" ] ; then
+    error_exit "file does not exist/is not readable"
+  fi
+  INPUT_FILE="${CUSTOM_INPUT_FILE}"
+else
+  INPUT_FILE="${DEFAULT_INPUT_FILE}"
+fi
+
+#-------------------------------------------------------------------------------
+# Just display version, if "-h" or "-v" is given and exit without error code
+#   if "-v" is given.
+#-------------------------------------------------------------------------------
+if [ "${GET_HELP}" = "yes" -o "${GET_VERSION_ONLY}" = "yes" ] ; then
+  ${PRINTF_BIN} "\nVersion: ${VERSION} (created: ${CREATED})\n\n"
+fi
+if [ "${GET_VERSION_ONLY}" = "yes" ] ; then exit 0 ; fi
+	
+#-------------------------------------------------------------------------------
+# Just display help, if "-h" is given and exit without error code.
+#-------------------------------------------------------------------------------
+if [ "${GET_HELP}" = "yes" ] ; then usage ; exit 0 ; fi
+
+#-------------------------------------------------------------------------------
+# Only Country.
+#-------------------------------------------------------------------------------
+# Hint: I think, that performance is here more importet than 
+#         DRY (don't repeat yourselve)!
+#-------------------------------------------------------------------------------
+if [ -n "${COUNTRY_STRING}" -a -z "${PROVIDER_STRING}" ] ; then
+  while read IP ; do
+    if ${GEOIPLOOKUP_BIN} "${IP}" \
+    | ${GREP_BIN} --extended-regexp "GeoIP Country.*Edition" \
+    | ${GREP_BIN} --fixed-strings --regexp="${COUNTRY_STRING}" \
+    > /dev/null 2>&1 ; then
+      ${PRINTF_BIN} "${IP}\n"
+    fi
+  done < "${INPUT_FILE}"
+fi
+  
+#-------------------------------------------------------------------------------
+# Only ASN.
+#-------------------------------------------------------------------------------
+if [ -z "${COUNTRY_STRING}" -a -n "${PROVIDER_STRING}" ] ; then
+  while read IP ; do
+    if ${GEOIPLOOKUP_BIN} "${IP}" \
+    | ${GREP_BIN} --extended-regexp "GeoIP ASNum.*Edition" \
+    | ${GREP_BIN} --fixed-strings --regexp="${PROVIDER_STRING}" \
+    > /dev/null 2>&1 ; then
+      ${PRINTF_BIN} "${IP}\n"
+    fi
+  done < "${INPUT_FILE}"
+fi
+
+#-------------------------------------------------------------------------------
+# First country and then ASN.
+#-------------------------------------------------------------------------------
+if [ -n "${COUNTRY_STRING}" -a -n "${PROVIDER_STRING}" ] ; then
+  while read IP ; do
+    if ${GEOIPLOOKUP_BIN} "${IP}" \
+    | ${GREP_BIN} --fixed-strings ${INVERT_MATCH} --regexp="${COUNTRY_STRING}" \
+    > /dev/null 2>&1 ; then
+      if ${GEOIPLOOKUP_BIN} "${IP}" \
+      | ${GREP_BIN} --fixed-strings ${INVERT_MATCH} --regexp="${PROVIDER_STRING}" \
+      > /dev/null 2>&1 ; then
+        ${PRINTF_BIN} "${IP}\n"
+      fi
+    fi
+  done < "${INPUT_FILE}"
+fi
+
+exit 0
