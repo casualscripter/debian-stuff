@@ -125,8 +125,11 @@ GEOIPLOOKUP_BIN="$( ${WHICH_BIN} geoiplookup )"
 #   install if neccessary.
 #-------------------------------------------------------------------------------
 if [ -z "${GEOIPLOOKUP_BIN}" ] ; then
-	${SUDO_BIN} ${APTITUDE_BIN} install geoip-bin geoip-database-contrib --assume-yes
+	${SUDO_BIN} ${APTITUDE_BIN} install geoip-bin --assume-yes
 	GEOIPLOOKUP_BIN="$( ${WHICH_BIN} geoiplookup )"
+fi
+if [ ! -x /usr/sbin/update-geoip-database ] ; then
+	${SUDO_BIN} ${APTITUDE_BIN} install geoip-database-contrib --assume-yes
 fi
 
 # Defaults:
