@@ -135,8 +135,12 @@ fi
 #-------------------------------------------------------------------------------
 # Purge orphaned packages.
 #-------------------------------------------------------------------------------
+RUNS=1
 while REDUNDANT="$( /usr/bin/deborphan )" ; /usr/bin/test -n "${REDUNDANT}" ; do
   /usr/bin/aptitude purge "${REDUNDANT}" --assume-yes
+  # prevent an infinite loop:
+  if [ ${RUNS} -gt 3 ] ; then break ; fi
+  RUNS=$(( ${RUNS} + 1 ))
 done
 
 exit 0
