@@ -228,11 +228,6 @@ install_if_necessary "/usr/bin/xmount" "xmount"
 install_if_necessary "/usr/bin/ewfinfo" "ewf-tools"
 
 #-------------------------------------------------------------------------------
-# Install The Sleuth Kit if necessary.
-#-------------------------------------------------------------------------------
-install_if_necessary "/usr/bin/mmls" "sleuthkit"
-
-#-------------------------------------------------------------------------------
 # Install parted if necessary.
 #-------------------------------------------------------------------------------
 install_if_necessary "/sbin/parted" "parted"
