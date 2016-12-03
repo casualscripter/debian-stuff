@@ -246,7 +246,7 @@ download_zip "http://netcologne.dl.sourceforge.net/project/edk2/OVMF/OVMF-X64-r1
 #-------------------------------------------------------------------------------
 # Download newest OS X booloader from:
 #   - Enoch (http://www.insanelymac.com/forum/files/file/71-enoch/)
-#       supports up to El Capitan (10.11) in virtual machines
+#       supports up to Sierra (10.12) in virtual machines
 #   or
 #   - Chimera (http://www.tonymacx86.com/downloads.php?do=file&id=258)
 #       supports up to Yosemite (10.10), but only on real hardware
@@ -257,11 +257,11 @@ download_zip "http://netcologne.dl.sourceforge.net/project/edk2/OVMF/OVMF-X64-r1
 OSX_DIR="${HOME}/QEMU/OSX"
 ${MKDIR_BIN} --parents "${OSX_DIR}"
 cd "${OSX_DIR}"
-${WGET_BIN} --no-clobber "https://neumannsland.de/Enoch-rev.2795_boot"
+${WGET_BIN} --no-clobber "https://neumannsland.de/Enoch-rev.2839_boot"
 if [ "${?}" -eq "0" ] ; then
-  success "download of Enoch-rev.2795_boot completed"
+  success "download of Enoch-rev.2839_boot completed"
 else
-  error_exit "download of Enoch-rev.2795_boot failed"
+  error_exit "download of Enoch-rev.2839_boot failed"
 fi
 
 ##-------------------------------------------------------------------------------
