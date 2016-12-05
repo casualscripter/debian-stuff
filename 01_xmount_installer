@@ -147,8 +147,8 @@ install_if_necessary () {
 # DESCRIPTION: Download (and update) single binary/script incl. chmod/chown.
 # PARAMETER 1: URI
 #===============================================================================
+readonly PREFIX="/usr/local/bin/"
 download_if_necessary() {
-  readonly PREFIX="/usr/local/bin/"
   ${SUDO_BIN} ${WGET_BIN} --timestamping --directory-prefix="${PREFIX}" "${1}"
 	${SUDO_BIN} ${CHOWN_BIN} root:root "${PREFIX}/${1##*/}"
 	${SUDO_BIN} ${CHMOD_BIN} 755 "${PREFIX}/${1##*/}"
