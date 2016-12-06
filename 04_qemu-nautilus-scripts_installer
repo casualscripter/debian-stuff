@@ -67,23 +67,30 @@
 
 #=== CONFIGURATION =============================================================
 WHICH_BIN="/usr/bin/which"                                  # Debian 8.x default
-PRINTF_BIN="$( ${WHICH_BIN} printf )"
-SUDO_BIN="$( ${WHICH_BIN} sudo )"                       # needs configured sudo!
-APTITUDE_BIN="$( ${WHICH_BIN} aptitude )"
-SLEEP_BIN="$( ${WHICH_BIN} sleep )"
-EXPR_BIN="$( ${WHICH_BIN} expr )"
-CAT_BIN="$( ${WHICH_BIN} cat )"
-PGREP_BIN="$( ${WHICH_BIN} pgrep )"
-GNOMESHELL_BIN="$( ${WHICH_BIN} gnome-shell )"
-MKDIR_BIN="$( ${WHICH_BIN} mkdir )"
-WGET_BIN="$( ${WHICH_BIN} wget )"
-UNZIP_BIN="$( ${WHICH_BIN} unzip )"
-RM_BIN="$( ${WHICH_BIN} rm )"
-SU_BIN="$( ${WHICH_BIN} su )"
-GREP_BIN="$( ${WHICH_BIN} grep )"
-GROUPS_BIN="$( ${WHICH_BIN} groups )"
-USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} usermod )"     # needs configured sudo!
-GSQ_BIN="$( ${WHICH_BIN} gnome-session-quit )"
+PRINTF_BIN="$( ${WHICH_BIN} "printf" )"
+SUDO_BIN="$( ${WHICH_BIN} "sudo" )"                     # needs configured sudo!
+#APTITUDE_BIN="$( ${WHICH_BIN} "aptitude" )"
+SLEEP_BIN="$( ${WHICH_BIN} "sleep" )"
+EXPR_BIN="$( ${WHICH_BIN} "expr" )"
+CAT_BIN="$( ${WHICH_BIN} "cat" )"
+PGREP_BIN="$( ${WHICH_BIN} "pgrep" )"
+GNOMESHELL_BIN="$( ${WHICH_BIN} "gnome-shell" )"
+MKDIR_BIN="$( ${WHICH_BIN} "mkdir" )"
+WGET_BIN="$( ${WHICH_BIN} "wget" )"
+UNZIP_BIN="$( ${WHICH_BIN} "unzip" )"
+RM_BIN="$( ${WHICH_BIN} "rm" )"
+#SU_BIN="$( ${WHICH_BIN} "su" )"
+GREP_BIN="$( ${WHICH_BIN} "grep" )"
+#GROUPS_BIN="$( ${WHICH_BIN} "groups" )"
+#USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} "usermod" )"   # needs configured sudo!
+#GSQ_BIN="$( ${WHICH_BIN} "gnome-session-quit" )"
+#MV_BIN="$( ${WHICH_BIN} "mv" )"
+RMDIR_BIN="$( ${WHICH_BIN} "rmdir" )"
+CHOWN_BIN="$( ${WHICH_BIN} "chown" )"
+CHMOD_BIN="$( ${WHICH_BIN} "chmod" )"
+ID_BIN="$( ${WHICH_BIN} "id" )"
+OPENSSL_BIN="$( ${WHICH_BIN} "openssl" )"
+AWK_BIN="$( ${WHICH_BIN} "awk" )"
 
 #=== FUNCTION ==================================================================
 # NAME: error_exit
@@ -122,63 +129,149 @@ success () {
   "${PRINTF_BIN}" "\033[01;32;40mSUCCESS: ${1}!\033[00m\n"
 }
 
+#=== FUNCTION ==================================================================
+# NAME: download_zip
+# DESCRIPTION: Download zip file if necessary and delete it after unzip.
+# PARAMETER 1: url to zip file (string)
+#===============================================================================
+download_zip () {
+  ${WGET_BIN} --no-clobber "${1}"
+  if [ "${?}" -eq "0" ] ; then
+    success "download of ${2} completed"
+  else
+    error_exit "download of ${2} failed"
+  fi
+  ${SLEEP_BIN} 1
+  ${UNZIP_BIN} "${1##*/}"
+  if [ "${?}" -eq "0" ] ; then
+    success "unzipping ${2} completed"
+  else
+    error_exit "unzipping ${2} failed"
+  fi
+  ${SLEEP_BIN} 1
+  ${RM_BIN} "${1##*/}"
+  if [ "${?}" -eq "0" ] ; then
+    success "deleting ${2} completed"
+  else
+    error_exit "deleting ${2} failed"
+  fi
+  ${SLEEP_BIN} 2
+}
+
 #-------------------------------------------------------------------------------
-# Check vor Debian GNU/Linux.
+# Check for Debian GNU/Linux.
 #-------------------------------------------------------------------------------
 if ! [ -f "/etc/debian_version" ] ; then
   error_exit "Debian GNU/Linux not found"
 fi
 
 #-------------------------------------------------------------------------------
-# Check vor Version 8 (jessie) or greater.
+# Check for Version 8 (jessie) or greater.
 #-------------------------------------------------------------------------------
 if ! ${EXPR_BIN} "$( ${CAT_BIN} /etc/debian_version )" \>= 8.0 > /dev/null 2>&1 ; then
   error_exit "Debian GNU/Linux >= 8.0 not found"
 fi
 
 #-------------------------------------------------------------------------------
-# Check vor a running Gnome desktop environment.
+# Check for a running Gnome desktop environment.
 #-------------------------------------------------------------------------------
 if ! ${PGREP_BIN} --full "${GNOMESHELL_BIN}" > /dev/null 2>&1 ; then
   error_exit "Gnome desktop environment not running"
 fi
 
-###
-
-if [ ! -d "${HOME}/Downloads" ] ; then
-  mkdir "${HOME}/Downloads"
+#-------------------------------------------------------------------------------
+# Check for some simple scripts (used by nautilus scripts).
+#-------------------------------------------------------------------------------
+if ! [ -f "/usr/local/bin/multi_sigfind" ] ; then
+	error_exit "multi_sigfind missing. Run 01_xmount-installer first"
 fi
-cd "${HOME}/Downloads"
-${WGET_BIN} --timestamping https://github.com/casualscripter/qemu-nautilus-scripts/archive/master.zip
-unzip master.zip
-# keine anderen nautilus skripte löschen, sondern dazu kopieren!
+if ! [ -f "/usr/local/bin/print_plist_entry.py" ] ; then
+	error_exit "print_plist_entry.py missing. Run 01_xmount-installer first"
+fi
+if ! [ -f "/usr/local/bin/kcpass.py" ] ; then
+	error_exit "kcpass.py missing. Run 01_xmount-installer first"
+fi
+
+#-------------------------------------------------------------------------------
+# Check source directory (03_qemu-system-installer).
+#-------------------------------------------------------------------------------
+QEMU_DIR="${HOME}/QEMU"
+if [ ! -d "${QEMU_DIR}" ] ; then
+  error_exit "QEMU directory missing. Run 03_qemu-system-installer first"
+fi
+
+#-------------------------------------------------------------------------------
+# Download and "install" qemu-nautilus-scripts.
+#-------------------------------------------------------------------------------
+cd "${QEMU_DIR}"
+download_zip "https://github.com/casualscripter/qemu-nautilus-scripts/archive/master.zip"
 cd qemu-nautilus-scripts-master/
 for pattern in ./* ./.[!.]* ; do
-  mv "${pattern}" "${HOME}/.local/share/nautilus/scripts/"
+  ${CP_BIN} -a "${pattern}" "${HOME}/.local/share/nautilus/scripts/"
 done
 cd ..
-rmdir qemu-nautilus-scripts/
-rm master.zip
-sudo chown -R "$( id -un )":"$( id -gn )" "${HOME}/.local/share/nautilus/scripts/"
-sudo chmod -R 755 "${HOME}/.local/share/nautilus/scripts/"
+${RMDIR_BIN} qemu-nautilus-scripts/
+${SUDO_BIN} ${CHOWN_BIN} -R "$( ${ID_BIN} -un )":"$( ${ID_BIN} -gn )" "${HOME}/.local/share/nautilus/scripts/"
+${SUDO_BIN} ${CHMOD_BIN} -R 755 "${HOME}/.local/share/nautilus/scripts/"
 
-# hinweis: kann dauern!
-if [ ! "${HOME}/.local/share/nautilus/scripts/02_dd/.PALADIN_EDGE_14.04.iso" ] ; then
-  SHA1="e0695b74281a63d8064b0862c1cb792ff9ba950f"
-  wget --timestamping --directory-prefix="${HOME}/.local/share/nautilus/scripts/02_dd/" "ftp://ftp.domain-ermittlung.de/${SHA1}.iso"
-  if [ "$( openssl dgst sha1 "${SHA1}.iso" | awk '{ print $NF; }' )" = "${SHA1}" ] ; then
-	  mv "${SHA1}.iso" "${HOME}/.local/share/nautilus/scripts/02_dd/.PALADIN_EDGE_14.04.iso"
+#-------------------------------------------------------------------------------
+# Download and "install" PALADIN (Could need some time for downloading!!!).
+#-------------------------------------------------------------------------------
+SHA1="e0695b74281a63d8064b0862c1cb792ff9ba950f"
+if ! [ -f "${HOME}/Downloads/${SHA1}.iso" ] ; then
+  ${WGET_BIN} --timestamping --directory-prefix="${HOME}/Downloads/" "ftp://ftp.domain-ermittlung.de/${SHA1}.iso"
+  if [ "$( ${OPENSSL_BIN} dgst -sha1 "${HOME}/Downloads/${SHA1}.iso" | ${AWK_BIN} '{ print $NF; }' )" = "${SHA1}" ] > /dev/null 2>&1 ; then
+    success "PALADIN verified"
+	else
+		${RM_BIN} "${HOME}/Downloads/${SHA1}.iso"
+	  error_exit "verification of PALADIN failed"
 	fi
 fi
+${CP_BIN} -a "${HOME}/Downloads/${SHA1}.iso" "${HOME}/.local/share/nautilus/scripts/02_dd/.PALADIN_EDGE_14.04.iso"
+if [ "${?}" -eq "0" ] ; then
+  success "PALADIN moved to the right location"
+else
+  error_exit "moving of PALADIN failed"
+fi
 
-# if test -f
-mv "${HOME}/QEMU/OSX/Enoch-rev.2795_boot" "${HOME}/.local/share/nautilus/scripts/04_boot/.Enoch-rev.2795_boot"
+#-------------------------------------------------------------------------------
+# Download and "install" UEFI reference firmware.
+#-------------------------------------------------------------------------------
+if ! [ -f "${QEMU_DIR}/OVMF/OVMF.fd" ] ; then
+	error_exit "OVMF.fd missing. Run 03_qemu-system-installer first"
+fi
+${CP_BIN} -a "${QEMU_DIR}/OVMF/OVMF.fd" "${HOME}/.local/share/nautilus/scripts/04_boot/.OVMF.fd"
+if [ "${?}" -eq "0" ] ; then
+  success "OVMF.fd moved to the right location"
+else
+  error_exit "moving of OVMF.fd failed"
+fi
 
-# if test -f
-mv "${HOME}/QEMU/OVMF/OVMF.fd" "${HOME}/.local/share/nautilus/scripts/04_boot/.OVMF.fd"
+#-------------------------------------------------------------------------------
+# Download and "install" Enoch bootloader.
+#-------------------------------------------------------------------------------
+if ! [ -f "${QEMU_DIR}/OSX/Enoch-rev.2839_boot" ] ; then
+	error_exit "Enoch bootloader missing. Run 03_qemu-system-installer first"
+fi
+${CP_BIN} -a "${QEMU_DIR}/OSX/Enoch-rev.2839_boot" "${HOME}/.local/share/nautilus/scripts/04_boot/.Enoch-rev.2839_boot"
+if [ "${?}" -eq "0" ] ; then
+  success "Enoch bootloader moved to the right location"
+else
+  error_exit "moving of Enoch bootloader failed"
+fi
 
-# if test -f
-mkdir "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/"
-mv "${HOME}/QEMU/QXL/*" "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/"
+#-------------------------------------------------------------------------------
+# Download and "install" Spice drivers.
+#-------------------------------------------------------------------------------
+if ! [ -d "${QEMU_DIR}/QXL" ] ; then
+	error_exit "QXL drivers missing. Run 03_qemu-system-installer first"
+fi
+${MKDIR_BIN} "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/drivers"
+${CP_BIN} -a "${HOME}/QEMU/QXL/*" "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/"
+if [ "${?}" -eq "0" ] ; then
+  success "Spice drivers moved to the right location"
+else
+  error_exit "moving of Spice drivers failed"
+fi
 
 exit 0
