@@ -69,7 +69,6 @@
 WHICH_BIN="/usr/bin/which"                                  # Debian 8.x default
 PRINTF_BIN="$( ${WHICH_BIN} "printf" )"
 SUDO_BIN="$( ${WHICH_BIN} "sudo" )"                     # needs configured sudo!
-#APTITUDE_BIN="$( ${WHICH_BIN} "aptitude" )"
 SLEEP_BIN="$( ${WHICH_BIN} "sleep" )"
 EXPR_BIN="$( ${WHICH_BIN} "expr" )"
 CAT_BIN="$( ${WHICH_BIN} "cat" )"
@@ -79,18 +78,14 @@ MKDIR_BIN="$( ${WHICH_BIN} "mkdir" )"
 WGET_BIN="$( ${WHICH_BIN} "wget" )"
 UNZIP_BIN="$( ${WHICH_BIN} "unzip" )"
 RM_BIN="$( ${WHICH_BIN} "rm" )"
-#SU_BIN="$( ${WHICH_BIN} "su" )"
 GREP_BIN="$( ${WHICH_BIN} "grep" )"
-#GROUPS_BIN="$( ${WHICH_BIN} "groups" )"
-#USERMOD_BIN="$( ${SUDO_BIN} ${WHICH_BIN} "usermod" )"   # needs configured sudo!
-#GSQ_BIN="$( ${WHICH_BIN} "gnome-session-quit" )"
-#MV_BIN="$( ${WHICH_BIN} "mv" )"
 RMDIR_BIN="$( ${WHICH_BIN} "rmdir" )"
 CHOWN_BIN="$( ${WHICH_BIN} "chown" )"
 CHMOD_BIN="$( ${WHICH_BIN} "chmod" )"
 ID_BIN="$( ${WHICH_BIN} "id" )"
 OPENSSL_BIN="$( ${WHICH_BIN} "openssl" )"
 AWK_BIN="$( ${WHICH_BIN} "awk" )"
+CP_BIN="$( ${WHICH_BIN} "cp" )"
 
 #=== FUNCTION ==================================================================
 # NAME: error_exit
@@ -209,10 +204,6 @@ cd qemu-nautilus-scripts-master/
 for pattern in ./* ./.[!.]* ; do
   ${CP_BIN} -a "${pattern}" "${HOME}/.local/share/nautilus/scripts/"
 done
-cd ..
-${RMDIR_BIN} qemu-nautilus-scripts/
-${SUDO_BIN} ${CHOWN_BIN} -R "$( ${ID_BIN} -un )":"$( ${ID_BIN} -gn )" "${HOME}/.local/share/nautilus/scripts/"
-${SUDO_BIN} ${CHMOD_BIN} -R 755 "${HOME}/.local/share/nautilus/scripts/"
 
 #-------------------------------------------------------------------------------
 # Download and "install" PALADIN (Could need some time for downloading!!!).
@@ -220,12 +211,12 @@ ${SUDO_BIN} ${CHMOD_BIN} -R 755 "${HOME}/.local/share/nautilus/scripts/"
 SHA1="e0695b74281a63d8064b0862c1cb792ff9ba950f"
 if ! [ -f "${HOME}/Downloads/${SHA1}.iso" ] ; then
   ${WGET_BIN} --timestamping --directory-prefix="${HOME}/Downloads/" "ftp://ftp.domain-ermittlung.de/${SHA1}.iso"
-  if [ "$( ${OPENSSL_BIN} dgst -sha1 "${HOME}/Downloads/${SHA1}.iso" | ${AWK_BIN} '{ print $NF; }' )" = "${SHA1}" ] > /dev/null 2>&1 ; then
+  if [ "$( ${OPENSSL_BIN} dgst -sha1 "${HOME}/Downloads/${SHA1}.iso" | ${AWK_BIN} '{ print $NF; }' )" = "${SHA1}" ] ; then
     success "PALADIN verified"
-	else
-		${RM_BIN} "${HOME}/Downloads/${SHA1}.iso"
-	  error_exit "verification of PALADIN failed"
-	fi
+  else
+    ${RM_BIN} "${HOME}/Downloads/${SHA1}.iso"
+    error_exit "verification of PALADIN failed"
+  fi
 fi
 ${CP_BIN} -a "${HOME}/Downloads/${SHA1}.iso" "${HOME}/.local/share/nautilus/scripts/02_dd/.PALADIN_EDGE_14.04.iso"
 if [ "${?}" -eq "0" ] ; then
@@ -264,14 +255,22 @@ fi
 # Download and "install" Spice drivers.
 #-------------------------------------------------------------------------------
 if ! [ -d "${QEMU_DIR}/QXL" ] ; then
-	error_exit "QXL drivers missing. Run 03_qemu-system-installer first"
+  error_exit "QXL drivers missing. Run 03_qemu-system-installer first"
 fi
-${MKDIR_BIN} "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/drivers"
-${CP_BIN} -a "${HOME}/QEMU/QXL/*" "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/"
+if ! [ -d "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/drivers" ] ; then
+  ${MKDIR_BIN} -p "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/drivers"
+fi
+${CP_BIN} -a "${HOME}/QEMU/QXL/"* "${HOME}/.local/share/nautilus/scripts/04_boot/.shared_folder/drivers"
 if [ "${?}" -eq "0" ] ; then
   success "Spice drivers moved to the right location"
 else
   error_exit "moving of Spice drivers failed"
 fi
+
+#-------------------------------------------------------------------------------
+# Fix privileges.
+#-------------------------------------------------------------------------------
+${SUDO_BIN} ${CHOWN_BIN} -R "$( ${ID_BIN} -un )":"$( ${ID_BIN} -gn )" "${HOME}/.local/share/nautilus/scripts/"
+${SUDO_BIN} ${CHMOD_BIN} -R 755 "${HOME}/.local/share/nautilus/scripts/"
 
 exit 0
