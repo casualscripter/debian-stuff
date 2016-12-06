@@ -233,6 +233,11 @@ install_if_necessary "/usr/bin/ewfinfo" "ewf-tools"
 install_if_necessary "/sbin/parted" "parted"
 
 #-------------------------------------------------------------------------------
+# Install testdisk if necessary.
+#-------------------------------------------------------------------------------
+install_if_necessary "/usr/bin/testdisk" "testdisk"
+
+#-------------------------------------------------------------------------------
 # Install sleuthkit if necessary.
 #-------------------------------------------------------------------------------
 install_if_necessary "/usr/bin/mmls" "sleuthkit"
