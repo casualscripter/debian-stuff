@@ -25,6 +25,7 @@
 #   Tested on:
 #   - Debian 8 and
 #   - OS X 10.11.4
+#   - OS X 10.13.3
 #
 # AUTHOR:
 #   Patrick Neumann, patrick@neumannsland.de
@@ -33,7 +34,7 @@
 #   (privately)
 #
 # VERSION:
-#   0.9 (beta)
+#   0.9.1 (beta)
 #
 # LINK TO THE MOST CURRENT VERSIONS:
 #   https://raw.githubusercontent.com/casualscripter/debian-stuff/master/print_plist_entry.py
@@ -41,8 +42,11 @@
 # CREATED:
 #   23.03.2016
 #
+# UPDATED:
+#   27.02.2018
+#
 # COPYRIGHT (C):
-#   2015-2016 - Patrick Neumann
+#   2015-2018 - Patrick Neumann
 #
 # LICENSE:
 #   This program is free software: you can redistribute it and/or modify
@@ -63,7 +67,8 @@
 #   ---
 #
 # HISTORY:
-#   0.9 - Patrick Neumann - Initial (public) release
+#   0.9   - Patrick Neumann - Initial (public) release
+#   0.9.1 - Patrick Neumann - added stdin support
 #
 #===============================================================================
 
@@ -84,8 +89,10 @@ except IndexError:
   usage()
   sys.exit( 1 )
 
-# check if first parameter is a file
-if not os.path.isfile( plist ):
+# check if first parameter is a "-" (stdin) or a regular file
+if plist == "-":
+  plist = sys.stdin
+elif not os.path.isfile( plist ):
   print "\nError: plist (file) does not exist!\n"
   sys.exit( 1 )
 
