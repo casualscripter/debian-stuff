@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# Usage:       ./generate_files_with_problematic_names
+#                or
+#              bash generate_files_with_problematic_names
+# Description: (see scriptname!)
+# Author:      Patrick Neumann (patrick@neumannsland.de)
+# Version:     1.0
+# Date:        27.02.2018
+# License:     GPL3
+# Warranty:    This program is distributed WITHOUT ANY WARRANTY
+# Todo:        Find and add more problems in filenames!?
+
+mkdir files_with_problematic_names
+
+cd files_with_problematic_names
+
+# gfwpn = g(enerate)f(iles)w(ith)p(roblematic)n(ames)
+# meier, meyer, mayer are mayr similar lastnames
+
+echo "gfwpn:word:meier" > word.txt
+echo "gfwpn:underscore:meyer" > underscore_instead_of_space.txt
+echo "gfwpn:hidden:mayer" > .hidden.txt
+echo "gfwpn:two dots:mayr" > ..two_dots.txt
+echo "gfwpn:three dots:meier" > ...three_dots.txt
+echo "gfwpn:leading hyphen:meyer" > ./-leading_hyphen.txt
+echo "gfwpn:with star:mayer" > with_*.txt
+echo "gfwpn:with backslash:mayr" > "with_\.txt"
+echo "gfwpn:blank at the beginning:meier" > " blank.txt"
+echo "gfwpn:blank as separator:meyer" > "blank as separator.txt"
+echo "gfwpn:newline as separator:mayer" > "newline_as
+separator.txt"
+echo "gfwpn:tabulator as separator:mayr" > tabulator_as$'\t'separator.txt
+
+exit 0
