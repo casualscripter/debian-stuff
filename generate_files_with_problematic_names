@@ -31,5 +31,6 @@ echo "gfwpn:blank as separator:meyer" > "blank as separator.txt"
 echo "gfwpn:newline as separator:mayer" > "newline_as
 separator.txt"
 echo "gfwpn:tabulator as separator:mayr" > tabulator_as$'\t'separator.txt
+echo "gfwpn:with questionmark:meier" > with_?.txt
 
 exit 0
