@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# Usage:       ./login-plist2john <login.plist>
+#                or
+#              bash login-plist2john <login.plist>
+# Description: Extracts the ShadowHashData from the plist of a user (OpenDirectory)
+#                and builds a string for usage with John the Ripper (john).
+# Author:      Patrick Neumann (patrick@neumannsland.de)
+# Platform:    macOS (tested: 10.13.3)
+# Version:     1.0
+# Date:        28.02.2018
+# License:     GPL3
+# Warranty:    This program is distributed WITHOUT ANY WARRANTY
+# Todo:        Find and add more problems in filenames!?
+
+if ! sudo file "${1}" | grep -F "Apple binary property list" &> /dev/null ; then
+  echo "Usage: ${0} <login.plist>"
+	exit 1
+fi
+
+PLIST="${1}"
+
+BASENAME="$( basename "${PLIST}" )"
+LOGIN="${BASENAME%.*}"
+
+SHADOWHASHDATA="$( sudo plutil -p "${PLIST}" | grep -iE -A10 --color ShadowHashData | tr -dc '0-9a-f' )"
+
+ITERATIONS="${SHADOWHASHDATA:470:4}"
+DECIMAL="$( python -c "print int('0x${ITERATIONS}',16)" )"
+
+SALT="${SHADOWHASHDATA:404:64}"
+
+ENTROPY="${SHADOWHASHDATA:142:256}"
+
+echo "${LOGIN}:\$ml\$${DECIMAL}\$${SALT}\$${ENTROPY}"
+
+exit 0
