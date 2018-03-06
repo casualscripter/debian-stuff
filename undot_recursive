@@ -42,8 +42,8 @@ if ! echo "${DIR}" | grep --extended-regexp "^/Volumes" &> /dev/null ; then
   echo "We only support /Volumes/* - EXIT!"
 fi
 if [ "${DIR}" = "/Volumes/Macintosh HD" ] ; then
-	echo "We do not support to modify your own system volume - EXIT!"
-	exit 1
+  echo "We do not support to modify your own system volume - EXIT!"
+  exit 1
 fi
 
 # TODO: check if mounted with "hdiutil -shadow"
@@ -59,23 +59,23 @@ function undot_recursive () {
   DEPTH=1
   while true ; do
     # check if find will find at least one file
-		FOUND=$( find "${DIR}" \( -type f -o -type d -o -type l \) -depth "${DEPTH}" -print -exec sh -c 'kill -TERM "${PPID}"' \; )
+    FOUND=$( find "${DIR}" \( -type f -o -type d -o -type l \) -depth "${DEPTH}" -print -exec sh -c 'kill -TERM "${PPID}"' \; )
     # case because globbing is faster than test
-		# check content of found not $? (always 143 = "killed by TERM")
-		case "${FOUND}" in
-		  '') break
-			    ;;
-		   *) find "${DIR}" \( -type f -o -type d -o -type l \) -depth "${DEPTH}" -exec sh -c '
+    # check content of found not $? (always 143 = "killed by TERM")
+    case "${FOUND}" in
+      '') break
+          ;;
+       *) find "${DIR}" \( -type f -o -type d -o -type l \) -depth "${DEPTH}" -exec sh -c '
             FILE="${1}"
             BASENAME="$( basename "${FILE}" )"
-	          if [ "${BASENAME:0:1}" == "." ] ; then
-			        mv "${FILE}" "$( dirname "${FILE}" )/__DOT__${BASENAME:1}"
-		        fi
-						exit 0
+            if [ "${BASENAME:0:1}" == "." ] ; then
+              mv "${FILE}" "$( dirname "${FILE}" )/__DOT__${BASENAME:1}"
+            fi
+            exit 0
           ' sh '{}' \; 2>/dev/null # <- ugly workaround to prevent output of warnings
-		      DEPTH=$(( DEPTH + 1 ))
-		      ;;
-		esac
+          DEPTH=$(( DEPTH + 1 ))
+          ;;
+    esac
   done
   exit 0
 }
