@@ -5,6 +5,7 @@
 #              bash undot_recursive <directory>
 # Description: Renames files and folders with a leading dot (.) recursively.
 # Author:      Patrick Neumann (patrick@neumannsland.de)
+# Coauthor:    Odin Heitmann
 # Platform:    macOS (tested: 10.13.3)
 # Version:     1.0
 # Date:        06.03.2018
