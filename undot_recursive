@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# Usage:       ./undot_recursive <directory>
+#                or
+#              bash undot_recursive <directory>
+# Description: Renames files and folders with a leading dot (.) recursively.
+# Author:      Patrick Neumann (patrick@neumannsland.de)
+# Platform:    macOS (tested: 10.13.3)
+# Version:     1.0
+# Date:        06.03.2018
+# License:     GPL3
+# Warranty:    This program is distributed WITHOUT ANY WARRANTY
+# Todo:        Find and add more problems in filenames!?
+
+# You have to be root!
+if [[ 0 -ne "$( id -u )" ]] ; then
+  echo "You need root privileges - EXIT!"
+  exit 1
+fi
+
+# function to display usage
+function usage () {
+  echo
+  echo "Usage: sudo ${0} <directory>"
+  echo
+  echo "  (directory has to exist!)"
+  echo
+}
+
+# function to form the absolute path from a relative path
+function absolute_path () {                                               
+  cd "$( dirname "${1}" )"
+  printf "%s/%s" "$( pwd )" "$( basename "${1}" )"
+}
+
+# check if directory (arg) is given
+[ -d "${1}" ] || { usage ; exit 1 ; }
+
+# protect our own running system
+DIR="$( absolute_path "${1}" )"
+if ! echo "${DIR}" | grep --extended-regexp "^/Volumes" &> /dev/null ; then
+  echo "We only support /Volumes/* - EXIT!"
+fi
+if [ "${DIR}" = "/Volumes/Macintosh HD" ] ; then
+	echo "We do not support to modify your own system volume - EXIT!"
+	exit 1
+fi
+
+# TODO: check if mounted with "hdiutil -shadow"
+
+# TODO: do not follow possible evil symlinks!?
+
+# the real magic
+function undot_recursive () {
+  if [ -z "${1}" -o ! -e "${1}" ] ; then
+    exit 1
+  fi
+  DIR="${1}"
+  DEPTH=1
+  while true ; do
+    # check if find will find at least one file
+		FOUND=$( find "${DIR}" \( -type f -o -type d -o -type l \) -depth "${DEPTH}" -print -exec sh -c 'kill -TERM "${PPID}"' \; )
+    # case because globbing is faster than test
+		# check content of found not $? (always 143 = "killed by TERM")
+		case "${FOUND}" in
+		  '') break
+			    ;;
+		   *) find "${DIR}" \( -type f -o -type d -o -type l \) -depth "${DEPTH}" -exec sh -c '
+            FILE="${1}"
+            BASENAME="$( basename "${FILE}" )"
+	          if [ "${BASENAME:0:1}" == "." ] ; then
+			        mv "${FILE}" "$( dirname "${FILE}" )/__DOT__${BASENAME:1}"
+		        fi
+						exit 0
+          ' sh '{}' \; 2>/dev/null # <- ugly workaround to prevent output of warnings
+		      DEPTH=$(( DEPTH + 1 ))
+		      ;;
+		esac
+  done
+  exit 0
+}
+
+# MAIN
+
+undot_recursive "${DIR}"
+
+# TODO: hint "copy shadow-file!"
+
+exit 0
