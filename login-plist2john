@@ -6,6 +6,7 @@
 # Description: Extracts the ShadowHashData from the plist of a user (OpenDirectory)
 #                and builds a string for usage with John the Ripper (john).
 # Author:      Patrick Neumann (patrick@neumannsland.de)
+# Coauthor:    Odin Heitmann
 # Platform:    macOS (tested: 10.13.3)
 # Version:     1.0
 # Date:        28.02.2018
